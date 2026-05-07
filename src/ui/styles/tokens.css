@@ -1,0 +1,109 @@
+/* Design tokens — must match Julio's portfolio. Do not introduce new tokens. */
+
+:root {
+  /* Surface */
+  --bg-primary: #F5F1E8;
+  --bg-secondary: #FAF7EE;
+  --bg-inverse: #1a1a1a;
+
+  /* Ink */
+  --ink-primary: #1a1a1a;
+  --ink-secondary: rgba(26, 26, 26, 0.6);
+  --ink-tertiary: rgba(26, 26, 26, 0.4);
+
+  /* Borders */
+  --border-strong: rgba(26, 26, 26, 0.4);
+  --border-medium: rgba(26, 26, 26, 0.2);
+  --border-faint: rgba(26, 26, 26, 0.1);
+
+  /* Severity */
+  --sev-critical: #DC2626;
+  --sev-serious: #EA580C;
+  --sev-moderate: #CA8A04;
+  --sev-minor: #1E3A5F;
+  --sev-resolved: #16A34A;
+
+  --accent-blueprint: #1E3A5F;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --text-xs: 10px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  --tracking-mono: 0.18em;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--ink-primary);
+  background: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+button {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--ink-primary);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+button:hover {
+  background: var(--bg-secondary);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  color: var(--ink-tertiary);
+  border-color: var(--border-medium);
+}
+
+button.primary {
+  background: var(--ink-primary);
+  color: var(--bg-primary);
+  border-color: var(--ink-primary);
+}
+
+button.primary:hover {
+  background: var(--accent-blueprint);
+  border-color: var(--accent-blueprint);
+}

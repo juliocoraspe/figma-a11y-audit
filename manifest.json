@@ -1,0 +1,11 @@
+{
+  "name": "Figma A11y Audit",
+  "id": "figma-a11y-audit-phase1",
+  "api": "1.0.0",
+  "main": "sandbox.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}

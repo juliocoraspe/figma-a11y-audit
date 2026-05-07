@@ -1,0 +1,28 @@
+{
+  "name": "figma-a11y-audit",
+  "version": "0.1.0-phase1",
+  "private": true,
+  "description": "Figma plugin that audits design files against WCAG 2.1/2.2 AA",
+  "author": "Julio Coraspe",
+  "license": "MIT",
+  "scripts": {
+    "dev": "VITE_BUILD_TARGET=ui vite build --watch --mode development",
+    "build": "tsc --noEmit && VITE_BUILD_TARGET=ui vite build && VITE_BUILD_TARGET=sandbox vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --dir src/sandbox/detect"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.108.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vite-plugin-singlefile": "^2.0.3",
+    "vitest": "^2.1.5"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
