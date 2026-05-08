@@ -95,38 +95,51 @@ Marca cada uno cuando lo verifiques. **Todos deben pasar para considerar Phase 1
 
 ---
 
-## 4. Phase 2 — fixtures adicionales
+## 4. Phase 2 Acelerado — fixtures completos para los 6 checks
 
-Añade estos al mismo archivo `a11y-audit-fixture` antes de validar Phase 2.
+Añade estos al archivo `a11y-audit-fixture`. Los fixtures de los puntos 1-10 ya cubren check 01 (contraste de texto) y se mantienen.
 
 ### Tap-target (check 03)
 
-11. `Button / Sign up` — frame de **18×24px**, fondo `#1E3A5F`, con texto blanco "Sign up" dentro. Renómbralo literalmente `button-sign-up` o ponlo dentro de un parent llamado `Button`. Esperado: **serious** (16-24px).
+11. `Button / Sign up` — frame de **18×24px**, fondo `#1E3A5F`, con texto blanco "Sign up". Renómbralo `button-sign-up` (token `button` o `btn` en el name). Esperado: **serious** (16-24px).
 12. `btn-tiny` — frame de **12×12px**. Esperado: **critical**.
 13. `btn-ok` — frame de **24×24px**, con un sibling `btn-also-ok` de 24×24px **a 1px** de distancia. Esperado: **moderate** (cumple 24 pero spacing < 24).
 14. `btn-perfect` — frame de **48×48px** con spacing >= 24px. Esperado: **no issue**.
 15. `cta-large` — frame de **44×44px** con spacing >= 24px. Esperado: **no issue**.
 
-### Focus-state (check 05)
+### Focus-state defined (check 05)
 
-Crea un **Component Set** llamado `Button` con 4 variantes, propiedad `State`:
-- `State=Default`
-- `State=Hover`
-- `State=Pressed`
-- `State=Disabled`
+16. **Component Set** llamado `Button` con propiedad `State` y 4 variantes: `Default`, `Hover`, `Pressed`, `Disabled`. **NO añadas Focus.** Esperado: **serious** "Missing focus state variant".
 
-NO añadas `State=Focus`. Esperado: **serious** "Missing focus state variant".
+17. **Component Set** llamado `Input` con `State=Default` / `State=Focus` / `State=Error`. Esperado: **no issue** del check 05.
 
-Después crea otro Component Set llamado `Input` con variantes:
-- `State=Default`
-- `State=Focus`
-- `State=Error`
+### UI contrast (check 02)
 
-Esperado: **no issue** (el patrón `focus` matchea `State=Focus`).
+18. `TextField / outline` — frame de **240×40px**, fondo blanco, **stroke `#D1D1D1` 1px**. Renómbralo `textfield-outline` (token `textfield`). Esperado: **serious** o **critical** (ratio ~1.39:1 vs blanco, < 3:1).
+19. `TextField / focus` — frame de 240×40px, fondo blanco, **stroke `#1E3A5F` 2px**. Renómbralo `textfield-focus`. Esperado: **no issue** (ratio ~13.6:1).
+20. `icon-search` — vector cuadrado de 24×24px con SOLID fill `#B8B8B8` sobre fondo blanco. Esperado: **moderate** o **serious** (ratio ~2.0:1 < 3:1).
+21. `icon-search-good` — mismo nodo, fill `#1A1A1A`. Esperado: **no issue**.
+22. `card` — frame 200×120px, fill `#F5F1E8`, **stroke `#F5F1E8`** (mismo color que fill). Esperado: **no issue** (decorative-border guard).
+
+### Text size (check 04)
+
+23. `caption-small` — texto `"Tiny print"`, Inter **9px** Regular, color `#1A1A1A`. **Sin** ancestor con name `caption|legal|disclaimer`. Esperado: **serious** (`< 10px hard floor`).
+24. `body-too-small` — texto Inter **11px**. Esperado: **minor** (`< 12px recomendado`).
+25. `body-ok` — texto Inter **14px**. Esperado: **no issue**.
+26. **Excepción**: pon el nodo `small-text` de 11px (del fixture original, punto 9) dentro de un frame llamado `Footer / Legal`. Esperado: **no issue** (la excepción `legal` baja el floor a 10px).
+
+### Focus visibility (check 06)
+
+27. **Component Set** `IconButton` con propiedad `State`:
+    - `State=Default` — frame 32×32px, fondo `#1E3A5F`, **sin stroke**.
+    - `State=Focus` — mismo frame, **stroke `#3D5A80` 1px** (color similar al fondo).
+    Esperado: **serious** del check 06 (1px < 2px **y** ratio ~1.4:1 < 3:1). El check 05 no flagea (focus existe).
+
+28. **Component Set** `IconButton2` con `State=Default` y `State=Focus`. La variante focus añade **stroke `#FFB400` 3px** sobre fondo `#1E3A5F`. Esperado: **no issue** del check 06 (3px ≥ 2px y ratio ~7.5:1 ≥ 3:1).
 
 ---
 
-## 5. Phase 2 — checklist de éxito
+## 5. Phase 2 Acelerado — checklist de éxito
 
 ### Numbering sincronizado
 - [ ] Tras el scan, los dots del canvas muestran un número en blanco (1, 2, 3, …)
@@ -134,19 +147,36 @@ Esperado: **no issue** (el patrón `focus` matchea `State=Focus`).
 - [ ] El orden es: critical → serious → moderate → minor (estables entre rescans)
 - [ ] Al dismiss-ear un issue, los números se renumeran 1..N en lista y canvas
 
-### Detección de los 3 checks
-- [ ] La lista contiene issues de los 3 checks: `01-text-contrast`, `03-tap-target`, `05-focus-defined`
+### Detección de los 6 checks (Tier 1 completo)
+- [ ] La lista contiene issues de los 6 check IDs: `01-text-contrast`, `02-ui-contrast`, `03-tap-target`, `04-text-size`, `05-focus-defined`, `06-focus-visibility`
 - [ ] El stat strip muestra los counts correctos por severidad
-- [ ] Mensajes son específicos: "Text #XXXXXX on #YYYYYY has contrast …", "'Sign up' is 18×24px, needs 24px minimum", "'Button' component has variants: Default, Hover, … Missing focus state variant"
+- [ ] **Check 01**: `"Text #7A7A7A on #FFFFFF has contrast 2.10:1 (needs 4.5:1 for normal text at 16px, AA)"`
+- [ ] **Check 02**: `"Border 'textfield-outline' (#D1D1D1) on #FFFFFF has contrast 1.39:1 (needs 3.0:1, AA)."` y/o `"Icon 'icon-search' (#B8B8B8) on #FFFFFF …"`
+- [ ] **Check 03**: `"'button-sign-up' is 18×24px, needs 24px minimum. Spacing to neighbors: …"`
+- [ ] **Check 04**: `"Text size 9px is below 10px hard floor."` o `"Text size 11px is below 12px recommended minimum."`
+- [ ] **Check 05**: `"'Button' component has variants: Default, Hover, Pressed, Disabled. Missing focus state variant …"`
+- [ ] **Check 06**: `"'IconButton' focus variant is present but indicator is 1px thick (needs 2px) and indicator contrast is 1.39:1 (needs 3.0:1)."`
+
+### False-positive guards
+- [ ] `card` con stroke == fill **NO** aparece en check 02 (decorative-border guard)
+- [ ] `Input` con `State=Focus` **NO** aparece en check 05
+- [ ] `IconButton2` con focus 3px sólido amarillo **NO** aparece en check 06
+- [ ] `Footer / Legal` aplicado al nodo de 11px **NO** aparece en check 04 (excepción)
 
 ### DetailDrawer
 - [ ] Click en una row → entra al drawer (sin animación)
 - [ ] El drawer muestra: severity chip, título descriptivo, mensaje, WCAG criterion+level+title
 - [ ] Sección LOCATION con breadcrumb y "Jump to canvas →" funcional
-- [ ] Sección DETAILS con valores formateados según el check (Text/Background/ratio para 01; Size/Spacing para 03; Existing variants para 05)
+- [ ] Sección DETAILS con valores formateados según el check:
+  - 01 → Text / Background / Current ratio / Required / Size
+  - 02 → Element type / Element color / Background / Current ratio / Required (+ Stroke weight si aplica)
+  - 03 → Size / Min dimension / Spacing / Required
+  - 04 → Font size / Recommended min / Hard floor (+ Exception si aplica)
+  - 05 → Existing variants (+ Suggested prop)
+  - 06 → Focus variant / Compared with / Indicator thickness / Indicator color / Indicator contrast / Background
 - [ ] Para issues de check 01 aparece sección PREVIEW con dos celdas (CURRENT vs SUGGESTED) mostrando "Aa" y el ratio
-- [ ] Para 03 y 05 NO aparece "Apply fix" (solo "Dismiss")
-- [ ] "Why this matters" colapsable funciona
+- [ ] Para checks 02, 03, 04, 05 y 06 NO aparece "Apply fix" (solo "Dismiss")
+- [ ] "Why this matters" colapsable existe para los 6 checks con texto educativo distinto
 
 ### Apply fix
 - [ ] Click en "Apply fix" sobre un issue de contraste → en el canvas el text node cambia de color al hex sugerido

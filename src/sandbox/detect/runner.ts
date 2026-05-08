@@ -19,8 +19,11 @@ import type {
 } from "@shared/types/NodeShape";
 import { PROGRESS_EMIT_EVERY } from "@shared/constants";
 import { checkTextContrast } from "./checks/01-text-contrast";
+import { checkUiContrast } from "./checks/02-ui-contrast";
 import { checkTapTarget } from "./checks/03-tap-target";
+import { checkTextSize } from "./checks/04-text-size";
 import { checkFocusDefined } from "./checks/05-focus-defined";
+import { checkFocusVisibility } from "./checks/06-focus-visibility";
 import type { NodeLookup, ScanContext } from "./types/scan-context";
 
 export interface RunnerOptions {
@@ -87,12 +90,20 @@ export async function runScan(opts: RunnerOptions): Promise<RunnerResult> {
 
     const ctx: ScanContext = { lookup, nodePath: pathOf(sn) };
 
+    // Text-only checks
     if (shape.type === "TEXT") {
       issues.push(...checkTextContrast(shape, ctx));
+      issues.push(...checkTextSize(shape, ctx));
     }
+
+    // Universal checks (each short-circuits internally on type)
+    issues.push(...checkUiContrast(shape, ctx));
     issues.push(...checkTapTarget(shape, ctx));
+
+    // Component-set checks
     if (shape.type === "COMPONENT_SET") {
       issues.push(...checkFocusDefined(shape, ctx));
+      issues.push(...checkFocusVisibility(shape, ctx));
     }
   }
 

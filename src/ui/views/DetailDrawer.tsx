@@ -448,13 +448,17 @@ function titleFor(checkId: CheckId): string {
 function whyMatters(checkId: CheckId): string {
   switch (checkId) {
     case "01-text-contrast":
-      return "Users with low vision rely on contrast to distinguish text from background. WCAG 1.4.3 sets the floor; below it text becomes unreadable for many.";
+      return "Users with low vision or color blindness rely on strong contrast to read text. A ratio below 4.5:1 makes content inaccessible to roughly 1 in 12 men and many others with vision impairments.";
+    case "02-ui-contrast":
+      return "Borders, icons, and focus indicators must contrast with adjacent surfaces so users can perceive them — especially with magnification, glare, or low-quality displays.";
     case "03-tap-target":
-      return "Small targets cause mis-taps for everyone, but disproportionately for users with motor impairments. 24×24 is the WCAG 2.5.8 minimum; 44×44 is the recommended comfortable size.";
+      return "Small targets cause mis-taps for everyone but disproportionately for users with motor impairments. 24×24px is the WCAG 2.5.8 minimum; 44×44px is the recommended comfortable size.";
+    case "04-text-size":
+      return "Text below 12px is hard to read, especially for users with low vision or on smaller screens. Larger sizes also improve comprehension and reduce eye strain.";
     case "05-focus-defined":
-      return "Keyboard users move through interactive elements with Tab. Without a visible focus indicator they can't tell where they are. Add a Focus variant alongside Default/Hover/Pressed.";
-    default:
-      return "Accessibility requirement defined by WCAG. Refer to the criterion link for the full guidance.";
+      return "Keyboard users move through interactive elements with Tab. Without a visible focus indicator they can't tell where they are — one of the top accessibility failures in production.";
+    case "06-focus-visibility":
+      return "A focus indicator must be visible — thin, low-contrast, or hidden by overflow defeats its purpose. 2px thickness with 3:1 contrast ensures it's always clear.";
   }
 }
 
@@ -482,6 +486,24 @@ function formatDetails(
       ]);
       break;
     }
+    case "02-ui-contrast": {
+      out.push(["Element type", String(details["elementType"] ?? "—")]);
+      out.push(["Element color", String(details["elementColor"] ?? "—")]);
+      out.push(["Background", String(details["backgroundColor"] ?? "—")]);
+      const ratio = details["ratio"];
+      out.push([
+        "Current ratio",
+        typeof ratio === "number" ? `${ratio.toFixed(2)} : 1` : "n/a (over media)",
+      ]);
+      out.push([
+        "Required",
+        `${Number(details["threshold"] ?? 0).toFixed(1)} : 1 (AA)`,
+      ]);
+      if (typeof details["strokeWeight"] === "number") {
+        out.push(["Stroke weight", `${details["strokeWeight"]} px`]);
+      }
+      break;
+    }
     case "03-tap-target":
       out.push([
         "Size",
@@ -497,6 +519,20 @@ function formatDetails(
         `${details["thresholdAA"]} px (AA), ${details["thresholdAAA"]} px (AAA)`,
       ]);
       break;
+    case "04-text-size":
+      out.push(["Font size", `${details["fontSize"]} px`]);
+      out.push([
+        "Recommended min",
+        `${details["recommendedMin"]} px`,
+      ]);
+      out.push(["Hard floor", `${details["hardFloor"]} px`]);
+      if (details["exceptionApplies"]) {
+        out.push(["Exception", "legal/disclaimer/caption — floor lowered"]);
+      }
+      if (typeof details["characters"] === "string" && details["characters"]) {
+        out.push(["Segment", `"${details["characters"]}"`]);
+      }
+      break;
     case "05-focus-defined":
       out.push([
         "Existing variants",
@@ -506,8 +542,37 @@ function formatDetails(
         out.push(["Suggested prop", String(details["suggestedProperty"])]);
       }
       break;
+    case "06-focus-visibility":
+      out.push([
+        "Focus variant",
+        String(details["focusVariant"] ?? "—"),
+      ]);
+      if (details["baselineVariant"]) {
+        out.push([
+          "Compared with",
+          String(details["baselineVariant"]),
+        ]);
+      }
+      if (typeof details["thickness"] === "number") {
+        out.push([
+          "Indicator thickness",
+          `${details["thickness"]} px (needs ${details["thicknessThreshold"]} px)`,
+        ]);
+      }
+      if (details["indicatorColor"]) {
+        out.push(["Indicator color", String(details["indicatorColor"])]);
+      }
+      if (typeof details["indicatorContrast"] === "number") {
+        out.push([
+          "Indicator contrast",
+          `${(details["indicatorContrast"] as number).toFixed(2)} : 1 (needs ${Number(details["contrastThreshold"]).toFixed(1)} : 1)`,
+        ]);
+      }
+      if (details["backgroundColor"]) {
+        out.push(["Background", String(details["backgroundColor"])]);
+      }
+      break;
     default:
-      // Generic fallback for checks we haven't formatted yet.
       for (const [k, v] of Object.entries(details)) {
         out.push([k, JSON.stringify(v)]);
       }

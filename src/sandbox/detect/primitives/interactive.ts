@@ -62,6 +62,31 @@ export function looksInteractive(name: string): boolean {
   return matchesToken(name);
 }
 
+const ICON_TOKENS = ["icon", "ic_", "ic-"];
+
+/**
+ * Conservative icon classifier. Returns true only when the name itself
+ * carries an icon token. We deliberately do NOT use "small square element"
+ * heuristics here — too many false positives in component sets.
+ */
+export function looksLikeIcon(name: string): boolean {
+  const lower = name.toLowerCase();
+  return ICON_TOKENS.some((tok) => lower.includes(tok));
+}
+
+const INPUT_TOKENS = ["input", "field", "textfield", "textbox", "select"];
+
+/**
+ * Used by check 02 to decide whether a stroked node is a meaningful UI
+ * element worth auditing (input, button, container) vs decorative.
+ */
+export function looksLikeInputOrContainer(name: string): boolean {
+  const lower = name.toLowerCase();
+  if (INPUT_TOKENS.some((tok) => lower.includes(tok))) return true;
+  if (matchesToken(name)) return true; // re-uses interactive tokens
+  return false;
+}
+
 function matchesToken(name: string): boolean {
   const lower = name.toLowerCase();
   return INTERACTIVE_TOKENS.some((tok) => {
