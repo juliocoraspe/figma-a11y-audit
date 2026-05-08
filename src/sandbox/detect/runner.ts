@@ -15,10 +15,13 @@ import type {
   NodeShape,
   PaintShape,
   TextSegmentShape,
+  VariantInfo,
 } from "@shared/types/NodeShape";
 import { PROGRESS_EMIT_EVERY } from "@shared/constants";
-import { checkTextContrast, type ScanContext } from "./checks/01-text-contrast";
-import type { BackgroundLookup } from "./primitives/background";
+import { checkTextContrast } from "./checks/01-text-contrast";
+import { checkTapTarget } from "./checks/03-tap-target";
+import { checkFocusDefined } from "./checks/05-focus-defined";
+import type { NodeLookup, ScanContext } from "./types/scan-context";
 
 export interface RunnerOptions {
   scope: "page";
@@ -56,12 +59,18 @@ export async function runScan(opts: RunnerOptions): Promise<RunnerResult> {
     shapes.set(sn.id, figmaNodeToShape(sn));
   }
 
-  // Build a stable lookup so checks can navigate parents on NodeShape only.
-  const lookup: BackgroundLookup = {
+  // Build a stable lookup so checks can navigate the tree on NodeShape only.
+  const lookup: NodeLookup = {
+    getById: (id) => shapes.get(id),
     getParent: (n) => (n.parentId ? shapes.get(n.parentId) : undefined),
+    getChildren: (n) =>
+      (n.childrenIds ?? [])
+        .map((id) => shapes.get(id))
+        .filter((c): c is NodeShape => c !== undefined),
   };
 
-  // Pass 2 — dispatch.
+  // Pass 2 — dispatch. Each node is offered to every applicable check;
+  // checks short-circuit on type so the cost is small.
   const issues: Issue[] = [];
   let processed = 0;
   for (const sn of order) {
@@ -70,23 +79,25 @@ export async function runScan(opts: RunnerOptions): Promise<RunnerResult> {
       opts.onProgress &&
       processed % PROGRESS_EMIT_EVERY === 0
     ) {
-      opts.onProgress(processed, order.length, "01-text-contrast");
+      opts.onProgress(processed, order.length, "running checks");
     }
 
     const shape = shapes.get(sn.id);
     if (!shape) continue;
 
+    const ctx: ScanContext = { lookup, nodePath: pathOf(sn) };
+
     if (shape.type === "TEXT") {
-      const ctx: ScanContext = {
-        lookup,
-        nodePath: pathOf(sn),
-      };
       issues.push(...checkTextContrast(shape, ctx));
+    }
+    issues.push(...checkTapTarget(shape, ctx));
+    if (shape.type === "COMPONENT_SET") {
+      issues.push(...checkFocusDefined(shape, ctx));
     }
   }
 
   if (opts.onProgress) {
-    opts.onProgress(order.length, order.length, "01-text-contrast");
+    opts.onProgress(order.length, order.length, "done");
   }
 
   return {
@@ -159,6 +170,11 @@ export function figmaNodeToShape(sn: SceneNode): NodeShape {
     }
   }
 
+  // Component-set variants (used by check 05)
+  if (sn.type === "COMPONENT_SET") {
+    shape.variants = adaptVariants(sn as ComponentSetNode);
+  }
+
   return shape;
 }
 
@@ -221,6 +237,37 @@ function adaptEffects(effects: ReadonlyArray<Effect>): EffectShape[] {
       if ("spread" in e && typeof e.spread === "number") shape.spread = e.spread;
       out.push(shape);
     }
+  }
+  return out;
+}
+
+function adaptVariants(set: ComponentSetNode): VariantInfo[] {
+  const out: VariantInfo[] = [];
+  for (const child of set.children) {
+    if (child.type !== "COMPONENT") continue;
+    const properties = parseVariantName(child.name, child.variantProperties);
+    out.push({ id: child.id, rawName: child.name, properties });
+  }
+  return out;
+}
+
+/**
+ * Figma exposes `variantProperties` only on instances; on COMPONENT children
+ * of a COMPONENT_SET it can be null. Fall back to parsing the raw name,
+ * which always uses the form "Prop1=Val1, Prop2=Val2".
+ */
+function parseVariantName(
+  rawName: string,
+  variantProps: { [name: string]: string } | null,
+): Record<string, string> {
+  if (variantProps) return { ...variantProps };
+  const out: Record<string, string> = {};
+  for (const part of rawName.split(",")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    const k = part.slice(0, eq).trim();
+    const v = part.slice(eq + 1).trim();
+    if (k) out[k] = v;
   }
   return out;
 }

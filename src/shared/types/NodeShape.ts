@@ -54,6 +54,16 @@ export interface TextSegmentShape {
   fontName: FontNameShape;
 }
 
+/** Variant metadata of a single COMPONENT inside a COMPONENT_SET. */
+export interface VariantInfo {
+  /** The component's own node id. */
+  id: string;
+  /** Raw name (e.g. "State=Hover, Size=Md"). */
+  rawName: string;
+  /** Parsed variant properties (e.g. { State: "Hover", Size: "Md" }). */
+  properties: Record<string, string>;
+}
+
 export interface NodeShape {
   id: string;
   name: string;
@@ -78,6 +88,9 @@ export interface NodeShape {
   characters?: string;
   /** Populated by the runner when fills === MIXED, otherwise undefined. */
   textSegments?: TextSegmentShape[];
+
+  /** Populated by the runner for COMPONENT_SET nodes. */
+  variants?: VariantInfo[];
 
   // Tree
   parentId?: string;

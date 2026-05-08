@@ -20,28 +20,33 @@ figma.ui.onmessage = (msg: UIToSandbox) => {
 };
 
 // Click-on-dot: when the user selects a dot on the canvas, we forward the
-// underlying issue's nodeId to the UI and redirect selection to the real
-// node so the user is not stuck with a locked dot selected.
+// underlying issue id (and the affected node id) to the UI and redirect
+// selection to the real node so the user is not stuck with a locked dot
+// selected.
 figma.on("selectionchange", () => {
   const sel = figma.currentPage.selection;
   if (sel.length !== 1) return;
   const single = sel[0];
   if (!single) return;
 
-  const targetId = resolveDotSelection(single);
-  if (!targetId) return;
+  const resolved = resolveDotSelection(single);
+  if (!resolved) return;
 
-  const issueIds = state.lastIssues
-    .filter((i) => i.nodeId === targetId)
-    .map((i) => i.id);
+  // Prefer the issue id encoded in the dot name; if multiple issues share
+  // a node we still surface the specific one the user clicked.
+  const matching = state.lastIssues.filter((i) => i.id === resolved.issueId);
+  const issueIds =
+    matching.length > 0
+      ? matching.map((i) => i.id)
+      : state.lastIssues.filter((i) => i.nodeId === resolved.nodeId).map((i) => i.id);
 
   figma.ui.postMessage({
     type: "node-focused",
-    nodeId: targetId,
+    nodeId: resolved.nodeId,
     issueIds,
   });
 
-  const target = figma.getNodeById(targetId);
+  const target = figma.getNodeById(resolved.nodeId);
   if (target && target.type !== "DOCUMENT" && target.type !== "PAGE") {
     figma.currentPage.selection = [target as SceneNode];
   }

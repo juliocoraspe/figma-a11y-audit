@@ -30,16 +30,11 @@ import {
 } from "../primitives/color";
 import {
   getEffectiveBackground,
-  type BackgroundLookup,
   type EffectiveBackground,
 } from "../primitives/background";
+import type { ScanContext } from "../types/scan-context";
 
-export interface ScanContext {
-  /** Stable lookup so checks can reach parents without holding figma.* refs. */
-  lookup: BackgroundLookup;
-  /** Path of human-readable names from page root to the current node. */
-  nodePath: string[];
-}
+export type { ScanContext } from "../types/scan-context";
 
 const CHECK_ID = "01-text-contrast";
 const WCAG = wcagFor(CHECK_ID);
@@ -113,6 +108,12 @@ function evaluateSegment(
   const severity: Severity = ratio < threshold * 0.7 ? "critical" : "serious";
   const ratioStr = ratio.toFixed(2);
   const thresholdStr = threshold.toFixed(1);
+  const fgHex = rgbToHex(fg);
+  const bgHex = rgbToHex(bg.color);
+  const isLarge = threshold === CONTRAST_THRESHOLD_LARGE;
+  const isBold = isBoldStyle(seg.fontName.style);
+  const sizeLabel = `${seg.fontSize}px${isBold ? " bold" : ""}`;
+  const textRole = isLarge ? "large text" : "normal text";
 
   return [
     makeIssue({
@@ -125,7 +126,7 @@ function evaluateSegment(
       fg,
       bg: bg.color,
       bgReason: null,
-      message: `Contrast ${ratioStr}:1 below ${thresholdStr}:1 minimum`,
+      message: `Text ${fgHex} on ${bgHex} has contrast ${ratioStr}:1 (needs ${thresholdStr}:1 for ${textRole} at ${sizeLabel}, AA)`,
     }),
   ];
 }

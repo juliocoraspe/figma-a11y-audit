@@ -31,4 +31,11 @@ export interface Issue {
   details: Record<string, unknown>;
   fix?: IssueFix;
   status: "open" | "dismissed" | "resolved";
+  /**
+   * Stable 1-indexed display order assigned UI-side after sorting.
+   * The same number is rendered in the canvas dot and in the list row, so
+   * the user can match a dot to its row at a glance.
+   * Optional: checks never set this; only the UI does.
+   */
+  index?: number;
 }

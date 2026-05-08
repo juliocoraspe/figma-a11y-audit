@@ -93,11 +93,87 @@ Marca cada uno cuando lo verifiques. **Todos deben pasar para considerar Phase 1
 
 ---
 
-## 4. Notas para reportar
+---
+
+## 4. Phase 2 — fixtures adicionales
+
+Añade estos al mismo archivo `a11y-audit-fixture` antes de validar Phase 2.
+
+### Tap-target (check 03)
+
+11. `Button / Sign up` — frame de **18×24px**, fondo `#1E3A5F`, con texto blanco "Sign up" dentro. Renómbralo literalmente `button-sign-up` o ponlo dentro de un parent llamado `Button`. Esperado: **serious** (16-24px).
+12. `btn-tiny` — frame de **12×12px**. Esperado: **critical**.
+13. `btn-ok` — frame de **24×24px**, con un sibling `btn-also-ok` de 24×24px **a 1px** de distancia. Esperado: **moderate** (cumple 24 pero spacing < 24).
+14. `btn-perfect` — frame de **48×48px** con spacing >= 24px. Esperado: **no issue**.
+15. `cta-large` — frame de **44×44px** con spacing >= 24px. Esperado: **no issue**.
+
+### Focus-state (check 05)
+
+Crea un **Component Set** llamado `Button` con 4 variantes, propiedad `State`:
+- `State=Default`
+- `State=Hover`
+- `State=Pressed`
+- `State=Disabled`
+
+NO añadas `State=Focus`. Esperado: **serious** "Missing focus state variant".
+
+Después crea otro Component Set llamado `Input` con variantes:
+- `State=Default`
+- `State=Focus`
+- `State=Error`
+
+Esperado: **no issue** (el patrón `focus` matchea `State=Focus`).
+
+---
+
+## 5. Phase 2 — checklist de éxito
+
+### Numbering sincronizado
+- [ ] Tras el scan, los dots del canvas muestran un número en blanco (1, 2, 3, …)
+- [ ] La columna de la izquierda de cada row de la lista muestra el mismo número
+- [ ] El orden es: critical → serious → moderate → minor (estables entre rescans)
+- [ ] Al dismiss-ear un issue, los números se renumeran 1..N en lista y canvas
+
+### Detección de los 3 checks
+- [ ] La lista contiene issues de los 3 checks: `01-text-contrast`, `03-tap-target`, `05-focus-defined`
+- [ ] El stat strip muestra los counts correctos por severidad
+- [ ] Mensajes son específicos: "Text #XXXXXX on #YYYYYY has contrast …", "'Sign up' is 18×24px, needs 24px minimum", "'Button' component has variants: Default, Hover, … Missing focus state variant"
+
+### DetailDrawer
+- [ ] Click en una row → entra al drawer (sin animación)
+- [ ] El drawer muestra: severity chip, título descriptivo, mensaje, WCAG criterion+level+title
+- [ ] Sección LOCATION con breadcrumb y "Jump to canvas →" funcional
+- [ ] Sección DETAILS con valores formateados según el check (Text/Background/ratio para 01; Size/Spacing para 03; Existing variants para 05)
+- [ ] Para issues de check 01 aparece sección PREVIEW con dos celdas (CURRENT vs SUGGESTED) mostrando "Aa" y el ratio
+- [ ] Para 03 y 05 NO aparece "Apply fix" (solo "Dismiss")
+- [ ] "Why this matters" colapsable funciona
+
+### Apply fix
+- [ ] Click en "Apply fix" sobre un issue de contraste → en el canvas el text node cambia de color al hex sugerido
+- [ ] La row del issue se marca como `resolved` (chip verde) en el drawer y desaparece o se atenúa al volver a la lista
+- [ ] Re-running el scan no vuelve a flagear ese node si el fix lo lleva sobre el threshold
+
+### Dismiss
+- [ ] Click en "Dismiss" → el issue desaparece de la lista
+- [ ] El dot correspondiente desaparece del canvas
+- [ ] La numeración se reajusta (ya no quedan huecos)
+
+### Hover sync
+- [ ] Hover sobre una row → la row resalta su fondo
+- [ ] (Sandbox-side glow es v0.2; en Phase 2 el highlight-node es noop pero el mensaje se envía sin errores)
+
+### Click en dot del canvas
+- [ ] Click en un dot del canvas → la row correspondiente se marca con border-left azul y hace scroll-into-view
+
+### Arquitectura
+- [ ] `grep -rn "figma\\." src/shared/ src/sandbox/detect/checks/ src/sandbox/detect/primitives/` solo devuelve matches en comentarios (no imports ni llamadas)
+- [ ] `npm run build` pasa sin errores de TS
+
+---
+
+## 6. Notas para reportar
 
 Si algo falla, captura:
 - Log de la consola del sandbox (`Plugins → Development → Show/Hide console`)
 - Screenshot de la UI en estado erróneo
 - Lista de qué issues aparecen vs qué esperabas
-
-Esto nos ayuda a iterar antes de pasar a Phase 2.

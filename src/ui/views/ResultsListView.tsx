@@ -3,10 +3,14 @@ import type { Issue, Severity } from "@shared/types/Issue";
 import { IssueRow } from "@ui/components/IssueRow";
 
 interface Props {
+  /** Already sorted and indexed (issue.index === 1..N). */
   issues: Issue[];
   meta: { totalNodes: number; durationMs: number } | null;
+  selectedIssueId: string | null;
+  hoveredNodeId: string | null;
   focusedIssueIds: string[];
-  onJump: (nodeId: string) => void;
+  onSelect: (issue: Issue) => void;
+  onHover: (nodeId: string | null) => void;
   onRescan: () => void;
 }
 
@@ -15,8 +19,11 @@ const SEVERITY_ORDER: Severity[] = ["critical", "serious", "moderate", "minor"];
 export function ResultsListView({
   issues,
   meta,
+  selectedIssueId,
+  hoveredNodeId,
   focusedIssueIds,
-  onJump,
+  onSelect,
+  onHover,
   onRescan,
 }: Props) {
   const counts = useMemo(() => countBySeverity(issues), [issues]);
@@ -95,8 +102,11 @@ export function ResultsListView({
             <div key={issue.id} data-issue-id={issue.id}>
               <IssueRow
                 issue={issue}
-                isFocused={focusedSet.has(issue.id)}
-                onClick={(i) => onJump(i.nodeId)}
+                index={issue.index ?? 0}
+                isSelected={selectedIssueId === issue.id || focusedSet.has(issue.id)}
+                isHovered={hoveredNodeId === issue.nodeId}
+                onSelect={onSelect}
+                onHover={onHover}
               />
             </div>
           ))
@@ -168,8 +178,8 @@ function EmptyState() {
           lineHeight: 1.5,
         }}
       >
-        This page passes the text-contrast check. Add more checks in
-        Phase&nbsp;2 to keep auditing.
+        This page passes all enabled checks. Re-run after edits to keep
+        auditing.
       </p>
     </div>
   );
