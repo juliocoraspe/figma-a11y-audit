@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Figma A11y Audit — WCAG 2.2 AA auditing inside Figma</title>
+<meta name="description" content="A Figma plugin that audits designs against WCAG 2.2 AA: contrast, tap targets, text size, focus states — plus local-first AI alt text via Ollama." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E3A5F'/%3E%3Ctext x='50' y='72' font-size='60' text-anchor='middle' fill='%23F5F1E8' font-family='monospace'%3EA%3C/text%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #F5F1E8;
+    --ink: #1A1A1A;
+    --ink-2: #4A4A4A;
+    --navy: #1E3A5F;
+    --critical: #DC2626;
+    --serious: #EA580C;
+    --moderate: #CA8A04;
+    --card: #FFFFFF;
+    --border: #DDD6C8;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  a { color: var(--navy); }
+  a:focus-visible, button:focus-visible {
+    outline: 3px solid var(--navy);
+    outline-offset: 2px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  header.hero { padding: 64px 0 40px; border-bottom: 2px solid var(--navy); }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--navy);
+  }
+  h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.15; margin: 8px 0 12px; }
+  .lede { font-size: 18px; color: var(--ink-2); max-width: 640px; margin: 0 0 24px; }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 2px solid var(--navy);
+  }
+  .btn-primary { background: var(--navy); color: var(--bg); }
+  .btn-secondary { background: transparent; color: var(--navy); }
+  section { padding: 48px 0; }
+  h2 { font-size: 24px; margin: 0 0 16px; }
+  .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; padding: 0; margin: 0; list-style: none; }
+  .checks li {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 16px;
+  }
+  .checks .num { font-family: var(--mono); font-size: 12px; color: var(--navy); }
+  .checks strong { display: block; margin: 4px 0; }
+  .checks span { font-size: 14px; color: var(--ink-2); }
+  .demo-note { font-size: 14px; color: var(--ink-2); max-width: 640px; }
+  .demo-shell {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+  }
+  .demo-frame {
+    width: min(420px, 100%);
+    border: 2px solid var(--navy);
+    background: var(--card);
+    box-shadow: 8px 8px 0 rgba(30, 58, 95, 0.15);
+  }
+  .demo-frame .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--navy);
+    color: var(--bg);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .demo-frame iframe {
+    display: block;
+    width: 100%;
+    height: 560px;
+    border: 0;
+    background: #fff;
+  }
+  pre {
+    background: #14202E;
+    color: #E8EDF4;
+    padding: 16px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+  ol.steps { padding-left: 20px; }
+  ol.steps li { margin-bottom: 8px; }
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 0 48px;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="kicker">Figma plugin · WCAG 2.2 AA · Local-first AI</span>
+    <h1>Catch accessibility issues<br />before they ship.</h1>
+    <p class="lede">
+      Figma A11y Audit scans your design file against WCAG 2.2 AA — text contrast,
+      tap targets, text size, focus states — and annotates tab order and alt text
+      with a local vision model via Ollama. Nothing leaves your machine.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/juliocoraspe/figma-a11y-audit">View on GitHub</a>
+      <a class="btn btn-secondary" href="#demo">Try the live demo ↓</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section aria-labelledby="checks-h">
+    <div class="wrap">
+      <h2 id="checks-h">Six Tier-1 checks</h2>
+      <ul class="checks">
+        <li><span class="num">01 · WCAG 1.4.3</span><strong>Text contrast</strong><span>Per-segment ratios, alpha blending, large-text thresholds, gradient/image warnings.</span></li>
+        <li><span class="num">02 · WCAG 1.4.11</span><strong>Non-text contrast</strong><span>Borders, icons and UI elements against their effective background.</span></li>
+        <li><span class="num">03 · WCAG 2.5.8</span><strong>Tap target size</strong><span>24px AA minimum with spacing analysis against neighboring interactive targets.</span></li>
+        <li><span class="num">04 · WCAG 1.4.4</span><strong>Text size</strong><span>12px recommended minimum, 10px hard floor, caption/legal exceptions.</span></li>
+        <li><span class="num">05 · WCAG 2.4.7</span><strong>Focus state defined</strong><span>Flags interactive component sets shipping Hover/Pressed/Disabled but no Focus.</span></li>
+        <li><span class="num">06 · WCAG 2.4.11</span><strong>Focus visibility</strong><span>Validates indicator thickness (≥2px) and contrast (≥3:1) against the surface.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="demo" aria-labelledby="demo-h">
+    <div class="wrap">
+      <h2 id="demo-h">Live demo</h2>
+      <p class="demo-note">
+        This is the <em>actual plugin UI</em>, running in your browser against a
+        simulated Figma sandbox with sample scan results. Hit
+        <strong>Scan page</strong>, browse issues, open details, apply the
+        contrast auto-fix. (AI alt text needs a local Ollama, so it stays
+        offline here.)
+      </p>
+      <div class="demo-shell">
+        <div class="demo-frame">
+          <div class="titlebar" aria-hidden="true">⬢ Figma A11y Audit — demo</div>
+          <iframe id="plugin" src="./plugin-ui.html" title="Interactive demo of the Figma A11y Audit plugin UI"></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="install-h">
+    <div class="wrap">
+      <h2 id="install-h">Run it locally</h2>
+      <ol class="steps">
+        <li>Clone and build:</li>
+      </ol>
+<pre><code>git clone https://github.com/juliocoraspe/figma-a11y-audit.git
+cd figma-a11y-audit
+npm install
+npm run build</code></pre>
+      <ol class="steps" start="2">
+        <li>In Figma desktop: <strong>Plugins → Development → Import plugin from manifest…</strong> and pick <code>dist/manifest.json</code>.</li>
+        <li>For AI alt text, run Ollama with permissive CORS (the plugin iframe has a <code>null</code> origin):</li>
+      </ol>
+<pre><code>OLLAMA_ORIGINS="*" ollama serve
+ollama pull llama3.2-vision</code></pre>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    Built by <a href="https://github.com/juliocoraspe">Julio Coraspe</a> · MIT License ·
+    React + Figma Plugin API + Ollama. Everything runs on your machine.
+  </div>
+</footer>
+
+<script>
+/**
+ * Mock Figma sandbox.
+ * The plugin UI talks to Figma's main thread via parent.postMessage
+ * ({ pluginMessage }) and listens for { pluginMessage } replies. This page
+ * plays the sandbox role with canned WCAG findings so the real UI is fully
+ * navigable: scan, list, detail drawer, contrast auto-fix, tab order.
+ */
+(function () {
+  var frame = document.getElementById("plugin");
+
+  var ISSUES = [
+    {
+      id: "01-text-contrast::demo-1",
+      checkId: "01-text-contrast",
+      severity: "critical",
+      message: "Text #9CA3AF on #FFFFFF has contrast 2.54:1 (needs 4.5:1 for normal text at 14px, AA)",
+      nodeId: "demo-1",
+      nodePath: ["Login", "Form", "Hint text"],
+      wcagCriterion: "1.4.3", wcagLevel: "AA",
+      details: { ratio: 2.54, threshold: 4.5, isLarge: false, textColor: "#9CA3AF", backgroundColor: "#FFFFFF", backgroundKind: "solid", fontSize: 14, fontStyle: "Regular" },
+      fix: { type: "manual", suggestion: "Darken or lighten the text until the ratio reaches 4.5:1." },
+      status: "open"
+    },
+    {
+      id: "01-text-contrast::demo-2",
+      checkId: "01-text-contrast",
+      severity: "serious",
+      message: "Text #8B9DC3 on #F5F1E8 has contrast 3.12:1 (needs 4.5:1 for normal text at 16px, AA)",
+      nodeId: "demo-2",
+      nodePath: ["Login", "Footer", "Terms link"],
+      wcagCriterion: "1.4.3", wcagLevel: "AA",
+      details: { ratio: 3.12, threshold: 4.5, isLarge: false, textColor: "#8B9DC3", backgroundColor: "#F5F1E8", backgroundKind: "solid", fontSize: 16, fontStyle: "Regular" },
+      fix: { type: "manual", suggestion: "Darken or lighten the text until the ratio reaches 4.5:1." },
+      status: "open"
+    },
+    {
+      id: "03-tap-target::demo-3",
+      checkId: "03-tap-target",
+      severity: "serious",
+      message: "'Icon button / Close' is 20×20px, needs 24px minimum. Spacing to neighbors: 8px.",
+      nodeId: "demo-3",
+      nodePath: ["Login", "Modal", "Icon button / Close"],
+      wcagCriterion: "2.5.8", wcagLevel: "AA",
+      details: { width: 20, height: 20, minDimension: 20, effectiveMinDimension: 20, spacing: 8, thresholdAA: 24, thresholdAAA: 44 },
+      fix: { type: "manual", suggestion: "Resize 'Icon button / Close' to at least 24px, or add padding so the hit area reaches that size." },
+      status: "open"
+    },
+    {
+      id: "05-focus-defined::demo-4",
+      checkId: "05-focus-defined",
+      severity: "serious",
+      message: "'Button / Primary' component has variants: Default, Hover, Pressed, Disabled. Missing focus state variant (WCAG 2.4.7 requires a visible focus indicator).",
+      nodeId: "demo-4",
+      nodePath: ["Components", "Button / Primary"],
+      wcagCriterion: "2.4.7", wcagLevel: "AA",
+      details: { variantCount: 4, existingVariants: "Default, Hover, Pressed, Disabled", suggestedProperty: "State" },
+      fix: { type: "manual", suggestion: "Add a variant where State is set to \"Focus\". Style it with a visible focus ring (a 2-3px outline in your accent color)." },
+      status: "open"
+    },
+    {
+      id: "06-focus-visibility::demo-5",
+      checkId: "06-focus-visibility",
+      severity: "moderate",
+      message: "'Input / Text field' focus variant is present but indicator is 1px thick (needs 2px) and indicator contrast is 1.82:1 (needs 3.0:1).",
+      nodeId: "demo-5",
+      nodePath: ["Components", "Input / Text field"],
+      wcagCriterion: "2.4.11", wcagLevel: "AA",
+      details: { focusVariant: "State=Focus", baselineVariant: "State=Default", thickness: 1, thicknessThreshold: 2, indicatorColor: "#BFD7F2", indicatorContrast: 1.82, contrastThreshold: 3, backgroundColor: "#FFFFFF" },
+      fix: { type: "manual", suggestion: "Make the focus indicator at least 2px thick with 3.0:1 contrast against the surrounding surface." },
+      status: "open"
+    },
+    {
+      id: "04-text-size::demo-6",
+      checkId: "04-text-size",
+      severity: "minor",
+      message: "Text size 11px is below 12px recommended minimum.",
+      nodeId: "demo-6",
+      nodePath: ["Login", "Form", "Helper text"],
+      wcagCriterion: "1.4.4", wcagLevel: "AA",
+      details: { fontSize: 11, recommendedMin: 12, hardFloor: 10, exceptionApplies: false },
+      fix: { type: "manual", suggestion: "Increase the font size to at least 12px (the recommended minimum)." },
+      status: "open"
+    }
+  ];
+
+  var TAB_NODES = [
+    { nodeId: "t1", name: "Input / Email" },
+    { nodeId: "t2", name: "Input / Password" },
+    { nodeId: "t3", name: "Link / Forgot password" },
+    { nodeId: "t4", name: "Button / Sign in" },
+    { nodeId: "t5", name: "Button / Create account" }
+  ];
+
+  function reply(msg) {
+    frame.contentWindow.postMessage({ pluginMessage: msg }, "*");
+  }
+
+  window.addEventListener("message", function (e) {
+    if (e.source !== frame.contentWindow) return;
+    var msg = e.data && e.data.pluginMessage;
+    if (!msg || typeof msg.type !== "string") return;
+
+    switch (msg.type) {
+      case "scan-request":
+        setTimeout(function () {
+          reply({ type: "scan-progress", current: 96, total: 240, checkRunning: "running checks" });
+        }, 250);
+        setTimeout(function () {
+          reply({ type: "scan-progress", current: 200, total: 240, checkRunning: "running checks" });
+        }, 500);
+        setTimeout(function () {
+          reply({
+            type: "scan-complete",
+            issues: JSON.parse(JSON.stringify(ISSUES)),
+            meta: { totalNodes: 240, durationMs: 318 }
+          });
+        }, 800);
+        break;
+
+      case "apply-fix":
+        reply({
+          type: "fix-applied",
+          issueId: msg.issueId,
+          before: {},
+          after: { textColor: msg.params && msg.params.targetHex }
+        });
+        break;
+
+      case "tab-order-request":
+        setTimeout(function () {
+          reply({ type: "tab-order-detected", frameId: "demo-frame", nodes: TAB_NODES });
+        }, 350);
+        break;
+
+      case "annotate-tab-order":
+        reply({
+          type: "tab-order-saved",
+          frameId: msg.frameId,
+          count: Object.keys(msg.orderMap || {}).length
+        });
+        break;
+
+      case "export-images-request":
+        reply({ type: "images-detected", images: [] });
+        break;
+
+      case "annotate-alt-text":
+        reply({ type: "image-alt-text-saved", nodeId: msg.nodeId });
+        break;
+
+      // scan-cancel, jump-to-node, highlight-node, overlay-repaint,
+      // dismiss-issue, annotate-language: canvas-side effects — no-op in demo.
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
