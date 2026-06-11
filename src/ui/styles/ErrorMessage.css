@@ -1,0 +1,94 @@
+/* Error Message */
+
+.error-message {
+  background: #fff5f5;
+  border: 1px solid #ffdbdb;
+  border-left: 3px solid #ff6b6b;
+  border-radius: 4px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.error-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.error-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.error-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d63031;
+  flex: 1;
+}
+
+.error-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.error-close:hover {
+  color: #666;
+}
+
+.error-message-text {
+  margin: 0;
+  color: #666;
+  line-height: 1.4;
+}
+
+.error-steps {
+  margin: 4px 0;
+  padding-left: 16px;
+  color: #666;
+}
+
+.error-steps li {
+  margin: 2px 0;
+  line-height: 1.4;
+}
+
+.error-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* Warning variant */
+
+.error-message.warning {
+  background: #fffaf0;
+  border-color: #ffd89b;
+  border-left-color: #ffb400;
+}
+
+.error-message.warning .error-title {
+  color: #e67700;
+}
+
+/* Success variant */
+
+.error-message.success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  border-left-color: #10b981;
+}
+
+.error-message.success .error-title {
+  color: #059669;
+}

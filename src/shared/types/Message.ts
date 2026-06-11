@@ -37,7 +37,19 @@ export type SandboxToUI =
       before: Record<string, unknown>;
       after: Record<string, unknown>;
     }
-  | { type: "error"; code: string; message: string };
+  | { type: "error"; code: string; message: string }
+  | {
+      type: "tab-order-detected";
+      frameId: string;
+      nodes: Array<{ nodeId: string; name: string }>;
+    }
+  | { type: "tab-order-saved"; frameId: string; count: number }
+  | {
+      type: "images-detected";
+      /** PNG bytes exported via exportAsync; structured-clone-safe. */
+      images: Array<{ nodeId: string; path: string[]; bytes: Uint8Array }>;
+    }
+  | { type: "image-alt-text-saved"; nodeId: string };
 
 /**
  * `overlay-repaint`: minimal payload the UI sends after sorting/dismissing.
@@ -63,7 +75,23 @@ export type UIToSandbox =
       checkId: Issue["checkId"];
       params: Record<string, unknown>;
     }
-  | { type: "dismiss-issue"; issueId: string };
+  | { type: "dismiss-issue"; issueId: string }
+  /** frameId omitted: sandbox falls back to the selected frame or the page. */
+  | { type: "tab-order-request"; frameId?: string }
+  /** Export image-bearing nodes (selection first, else current page) as PNG. */
+  | { type: "export-images-request" }
+  | {
+      type: "annotate-tab-order";
+      frameId: string;
+      orderMap: Record<string, number>;
+    }
+  | {
+      type: "annotate-alt-text";
+      nodeId: string;
+      text: string;
+      decorative: boolean;
+    }
+  | { type: "annotate-language"; frameId: string; lang: string };
 
 /** Helper to assert exhaustive switches on either union. */
 export function assertNever(value: never): never {

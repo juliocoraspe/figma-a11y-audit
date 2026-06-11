@@ -92,6 +92,13 @@ export interface NodeShape {
   /** Populated by the runner for COMPONENT_SET nodes. */
   variants?: VariantInfo[];
 
+  /**
+   * True when the node has prototype reactions (onClick, onHover, etc.).
+   * Strongest interactivity signal available; naming heuristics are the
+   * fallback for design files without prototype wiring.
+   */
+  hasReactions?: boolean;
+
   // Tree
   parentId?: string;
   childrenIds?: string[];

@@ -2,16 +2,14 @@
  * Interactivity classifier — pure heuristics over NodeShape.
  *
  * A node is treated as interactive if any of the following hold:
- *   1. Its name (or any ancestor's name in the breadcrumb) matches a known
+ *   1. It has prototype reactions (NodeShape.hasReactions) — the most
+ *      accurate signal; designers wire onClick/onHover on real targets.
+ *   2. Its name (or any ancestor's name in the breadcrumb) matches a known
  *      interactive token: button, btn, cta, link, input, field, checkbox,
  *      radio, toggle, switch, tab, chip, menu-item, icon-button.
- *   2. It is itself a COMPONENT_SET / COMPONENT / INSTANCE whose name
+ *   3. It is itself a COMPONENT_SET / COMPONENT / INSTANCE whose name
  *      matches a known interactive token. Components are the canonical way
  *      designers ship interactive elements in Figma.
- *
- * Reactions/prototype connections would be the most accurate signal, but
- * they're not exposed on NodeShape (sandbox-side). Phase 2 sticks to
- * naming heuristics; the runner can add reactions later behind the seam.
  */
 
 import type { NodeShape } from "@shared/types/NodeShape";
@@ -41,6 +39,8 @@ const INTERACTIVE_COMPONENT_TYPES = new Set([
 ]);
 
 export function isInteractive(node: NodeShape, ancestorNames: string[] = []): boolean {
+  if (node.hasReactions) return true;
+
   const own = matchesToken(node.name);
   if (own) return true;
 

@@ -17,7 +17,7 @@ import type {
   TextSegmentShape,
   VariantInfo,
 } from "@shared/types/NodeShape";
-import { PROGRESS_EMIT_EVERY } from "@shared/constants";
+import { OVERLAY_FRAME_NAME, PROGRESS_EMIT_EVERY } from "@shared/constants";
 import { checkTextContrast } from "./checks/01-text-contrast";
 import { checkUiContrast } from "./checks/02-ui-contrast";
 import { checkTapTarget } from "./checks/03-tap-target";
@@ -121,7 +121,14 @@ export async function runScan(opts: RunnerOptions): Promise<RunnerResult> {
 // ---------- collection ----------
 
 function collect(node: BaseNode, out: SceneNode[]): void {
-  if (isSceneNode(node)) out.push(node);
+  if (isSceneNode(node)) {
+    // Hidden subtrees can't fail the user: children of an invisible parent
+    // report visible === true, so pruning here is the only correct cutoff.
+    if (!node.visible) return;
+    // Never audit our own diagnostic overlay.
+    if (node.type === "FRAME" && node.name === OVERLAY_FRAME_NAME) return;
+    out.push(node);
+  }
   if ("children" in node) {
     for (const c of node.children) collect(c, out);
   }
@@ -163,6 +170,11 @@ export function figmaNodeToShape(sn: SceneNode): NodeShape {
     shape.strokeWeight = sn.strokeWeight === figma.mixed ? "MIXED" : sn.strokeWeight;
   }
   if ("effects" in sn) shape.effects = adaptEffects(sn.effects);
+
+  // Prototype reactions — the strongest interactivity signal we have.
+  if ("reactions" in sn) {
+    shape.hasReactions = (sn.reactions?.length ?? 0) > 0;
+  }
 
   // Parent / children
   if ("parent" in sn && sn.parent && sn.parent.id) shape.parentId = sn.parent.id;

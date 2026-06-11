@@ -7,11 +7,15 @@
  *   For every node classified as interactive (see primitives/interactive):
  *     1. Read its absolute bounding box (skip if missing).
  *     2. min = min(width, height)
- *     3. Compute spacing to nearest sibling (axis-aligned gap, not center-to-center).
+ *     3. Compute spacing to the nearest *interactive* sibling (axis-aligned
+ *        gap, not center-to-center). Decorative siblings don't compete for
+ *        the finger, so they don't count (WCAG 2.5.8 talks about adjacent
+ *        targets).
  *     4. Severity:
  *          critical  if min < 16
- *          serious   if 16 <= min < 24
- *          moderate  if 24 <= min < 44 OR min >= 24 but spacing < 24
+ *          serious   if 16 <= min < 24            (fails AA)
+ *          moderate  if min >= 24 but spacing < 24 (crowded targets)
+ *          minor     if 24 <= min < 44            (passes AA, AAA advisory)
  *          (>= 44 with adequate spacing: no issue)
  *     5. Skip pure children of interactive ancestors (we don't want both the
  *        button frame and its icon counted as separate small targets).
@@ -88,9 +92,10 @@ export function checkTapTarget(node: NodeShape, ctx: ScanContext): Issue[] {
 function severityFor(min: number, spacing: number | null): Severity | null {
   if (min < CRITICAL_BELOW) return "critical";
   if (min < MIN_AA) return "serious";
-  // min >= 24
+  // min >= 24: AA passes. Crowding against another target is the real risk;
+  // size alone between 24 and 44 is only an AAA advisory.
   if (spacing != null && spacing < MIN_AA) return "moderate";
-  if (min < MIN_AAA) return "moderate";
+  if (min < MIN_AAA) return "minor";
   return null;
 }
 
@@ -109,9 +114,17 @@ function nearestSiblingSpacing(
   const parent = ctx.lookup.getParent(node);
   if (!parent) return null;
 
+  // Only other *targets* matter for spacing: a decorative divider next to a
+  // button doesn't make the button harder to hit.
   const siblings = ctx.lookup
     .getChildren(parent)
-    .filter((s) => s.id !== node.id && s.visible !== false && s.absoluteBoundingBox);
+    .filter(
+      (s) =>
+        s.id !== node.id &&
+        s.visible !== false &&
+        s.absoluteBoundingBox &&
+        isInteractive(s, []),
+    );
 
   if (siblings.length === 0) return null;
 

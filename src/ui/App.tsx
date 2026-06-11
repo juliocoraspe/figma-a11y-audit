@@ -5,11 +5,14 @@ import { send, subscribe } from "@ui/services/bridge";
 import { WelcomeView } from "@ui/views/WelcomeView";
 import { ResultsListView } from "@ui/views/ResultsListView";
 import { DetailDrawer } from "@ui/views/DetailDrawer";
+import AnnotateView from "@ui/views/AnnotateView";
+import { SettingsDrawer } from "@ui/components/SettingsDrawer";
 
 type Phase =
   | { kind: "welcome" }
   | { kind: "scanning"; progress: { current: number; total: number; checkRunning: string } | null }
-  | { kind: "results" };
+  | { kind: "results" }
+  | { kind: "annotate" };
 
 const SEVERITY_RANK: Record<Severity, number> = {
   critical: 0,
@@ -26,6 +29,7 @@ export function App() {
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [focusedIssueIds, setFocusedIssueIds] = useState<string[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Sorted + indexed view of the current issues. Dismissed issues stay in
   // the model but disappear from the list and the canvas.
@@ -139,6 +143,11 @@ export function App() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {error ? <ErrorBanner message={error} onDismiss={() => setError(null)} /> : null}
 
+      <SettingsDrawer
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
+
       {phase.kind === "results" && selectedIssue ? (
         <DetailDrawer
           issue={selectedIssue}
@@ -148,16 +157,51 @@ export function App() {
           onDismiss={handleDismiss}
         />
       ) : phase.kind === "results" ? (
-        <ResultsListView
-          issues={visibleIssues}
-          meta={meta}
-          selectedIssueId={selectedIssueId}
-          hoveredNodeId={hoveredNodeId}
-          focusedIssueIds={focusedIssueIds}
-          onSelect={handleSelect}
-          onHover={handleHover}
-          onRescan={() => handleRun("page")}
-        />
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid #e0e0e0", background: "#fafafa", display: "flex", gap: "8px", justifyContent: "space-between", alignItems: "center" }}>
+            <button
+              onClick={() => setPhase({ kind: "annotate" })}
+              style={{
+                background: "#1e3a5f",
+                color: "white",
+                border: "none",
+                padding: "6px 12px",
+                borderRadius: "4px",
+                fontSize: "12px",
+                cursor: "pointer",
+                fontWeight: "500",
+              }}
+            >
+              Annotate
+            </button>
+            <button
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#666",
+                cursor: "pointer",
+                fontSize: "16px",
+                padding: "4px 8px",
+              }}
+              title="Settings"
+            >
+              ⚙️
+            </button>
+          </div>
+          <ResultsListView
+            issues={visibleIssues}
+            meta={meta}
+            selectedIssueId={selectedIssueId}
+            hoveredNodeId={hoveredNodeId}
+            focusedIssueIds={focusedIssueIds}
+            onSelect={handleSelect}
+            onHover={handleHover}
+            onRescan={() => handleRun("page")}
+          />
+        </div>
+      ) : phase.kind === "annotate" ? (
+        <AnnotateView onBack={() => setPhase({ kind: "results" })} />
       ) : (
         <WelcomeView
           isScanning={phase.kind === "scanning"}

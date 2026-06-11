@@ -6,6 +6,11 @@
   "ui": "ui.html",
   "editorType": ["figma"],
   "networkAccess": {
-    "allowedDomains": ["none"]
+    "allowedDomains": [
+      "http://localhost:11434",
+      "http://127.0.0.1:11434",
+      "http://localhost:3333"
+    ],
+    "reasoning": "Connects to a local Ollama server (or local proxy) to generate alt text with a local vision model. No data leaves the user's machine."
   }
 }
