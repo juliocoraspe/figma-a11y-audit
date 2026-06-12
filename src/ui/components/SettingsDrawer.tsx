@@ -190,13 +190,14 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
             <h3>About</h3>
             <div className="settings-about">
               <p>
-                <strong>A11y Audit</strong> v0.3
+                <strong>A11y Audit</strong> v0.5
               </p>
               <p>Accessibility scanning + AI-powered annotation</p>
               <ul className="settings-features">
-                <li>6 Tier 1 accessibility checks</li>
-                <li>Tab order assignment</li>
-                <li>Alt text generation with local AI</li>
+                <li>6 Tier 1 checks with canvas markers</li>
+                <li>Focus state auto-fixes (creates the variant)</li>
+                <li>Tab order with on-canvas path</li>
+                <li>Alt text assignment with local AI</li>
                 <li>Language declaration</li>
               </ul>
               <p className="settings-tech">

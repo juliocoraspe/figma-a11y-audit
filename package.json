@@ -1,6 +1,6 @@
 {
   "name": "a11y-figma-audit",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "private": false,
   "description": "Figma plugin that audits design files against WCAG 2.1/2.2 AA",
   "author": "Julio Coraspe",

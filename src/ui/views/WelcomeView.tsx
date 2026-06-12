@@ -21,7 +21,7 @@ export function WelcomeView({ isScanning, progress, onRun }: Props) {
       }}
     >
       <header style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-        <span className="mono-label">A11Y AUDIT · v0.1</span>
+        <span className="mono-label">A11Y AUDIT · v0.5</span>
         <h1
           className="display"
           style={{
@@ -41,8 +41,9 @@ export function WelcomeView({ isScanning, progress, onRun }: Props) {
             lineHeight: 1.5,
           }}
         >
-          Phase&nbsp;1 runs <em>Text&nbsp;Contrast</em>&nbsp;(1.4.3) over the
-          current page. More checks are coming in Phase&nbsp;2.
+          Runs six checks over the current page: text &amp; UI contrast, tap
+          targets, text size, and focus states. Then annotate tab order and
+          alt&nbsp;text from the results view.
         </p>
       </header>
 
@@ -56,7 +57,7 @@ export function WelcomeView({ isScanning, progress, onRun }: Props) {
           >
             Current page
           </button>
-          <button disabled aria-disabled="true" title="Coming in Phase 2">
+          <button disabled aria-disabled="true" title="Coming soon">
             Selection
           </button>
         </div>

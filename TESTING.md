@@ -1,6 +1,9 @@
-# Testing — Figma Accessibility Audit Plugin (Phase 1)
+# Testing — Figma Accessibility Audit Plugin
 
-Este archivo es tu checklist para validar Phase 1 contra un archivo Figma de prueba.
+Checklist de validación manual contra un archivo Figma de prueba.
+
+> Secciones 1–3: fixture y checklist de check 01 (text contrast). Secciones 4–5: fixtures de los checks 02–06.
+> Sección 7: smoke test de v0.5 — anotaciones en canvas, auto-fixes de focus, alt text con asignación real y Ollama.
 
 ---
 
@@ -207,3 +210,35 @@ Si algo falla, captura:
 - Log de la consola del sandbox (`Plugins → Development → Show/Hide console`)
 - Screenshot de la UI en estado erróneo
 - Lista de qué issues aparecen vs qué esperabas
+
+---
+
+## 7. Smoke test v0.5 — checks 02–06, anotaciones y auto-fixes
+
+### Fixture adicional
+En el mismo archivo de prueba añade:
+- Un component set `Button/Primary` con variantes `State=Default, State=Hover, State=Pressed` (sin Focus) — debe disparar **check 05**.
+- Un component set `Input/Field` con `State=Default` y `State=Focus` donde la variante Focus tenga un stroke de 1px gris claro — debe disparar **check 06**.
+- Un frame `icon-button` de 18×18px junto a otro botón a 8px de distancia — debe disparar **check 03** (serious).
+- Un texto de 9px — debe disparar **check 04** (serious, bajo el hard floor).
+- Una imagen (fill de imagen) dentro de un frame.
+
+### Checks y fixes
+- [ ] Check 05 aparece; en el drawer, **Create focus variant** crea la variante `State=Focus` dentro del set, con ring azul, y hace zoom a ella
+- [ ] Check 06 aparece; **Strengthen indicator** aplica el ring a la variante Focus existente
+- [ ] Ambos quedan `resolved` en la lista tras el fix
+- [ ] Elementos ocultos (visible=off) NO generan issues, incluso si sus hijos son "visibles"
+
+### Anotaciones en canvas
+- [ ] Dots de issues: esquina superior derecha, color por severidad; números de 3 dígitos se leen en una sola línea (píldora)
+- [ ] Tab Order: al asignar números aparecen cuadrados morados (esquina superior izquierda) + línea punteada trazando el recorrido; "Clear" los borra
+- [ ] Alt Text: "Scan selection" con nada seleccionado da error claro; "Scan entire page" lista las imágenes; seleccionar una en la lista la selecciona en el canvas
+- [ ] "Approve & assign" guarda (chip ALT verde en el canvas) y avanza a la siguiente pendiente
+- [ ] Cerrar y reabrir el plugin + "Scan entire page" → la imagen asignada aparece como `ALT ✓` (persistencia via plugin data)
+- [ ] Re-escanear con overlays presentes NO genera issues sobre los frames `[a11y-…]`
+- [ ] El botón **? Legend** explica las tres familias de anotaciones y el setup de Ollama
+
+### Ollama (alt text con IA)
+- [ ] Con Ollama corriendo (`OLLAMA_ORIGINS="*"`), Settings muestra 🟢 Connected y el modelo
+- [ ] "Generate" sobre una imagen produce texto en streaming (primera vez ~30s por carga del modelo)
+- [ ] Con Ollama apagado, "Generate" muestra el error con la instrucción de arranque (no cuelga)
