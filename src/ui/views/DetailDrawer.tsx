@@ -113,6 +113,13 @@ export function DetailDrawer({
           <span style={{ fontSize: "var(--text-sm)", color: "var(--ink-primary)" }}>
             {issue.nodePath.length ? issue.nodePath.join(" / ") : "(unnamed)"}
           </span>
+          {(issue.groupCount ?? 1) > 1 ? (
+            <span style={{ fontSize: "var(--text-sm)", color: "var(--ink-secondary)" }}>
+              Affects <strong>{issue.groupCount} instances</strong> of{" "}
+              {issue.componentName ?? "the same component"} — fixing or
+              dismissing applies to all of them.
+            </span>
+          ) : null}
           <button
             onClick={() => onJump(issue.nodeId)}
             style={{

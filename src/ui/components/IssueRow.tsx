@@ -88,10 +88,32 @@ export function IssueRow({
         </span>
       </span>
       <span
-        className="mono-label"
-        style={{ paddingTop: 4, color: "var(--ink-tertiary)" }}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          gap: 4,
+          paddingTop: 4,
+        }}
       >
-        WCAG {issue.wcagCriterion}
+        <span className="mono-label" style={{ color: "var(--ink-tertiary)" }}>
+          WCAG {issue.wcagCriterion}
+        </span>
+        {(issue.groupCount ?? 1) > 1 ? (
+          <span
+            className="mono-label"
+            style={{
+              background: "var(--accent-blueprint, #1e3a5f)",
+              color: "var(--bg-primary, #fff)",
+              padding: "1px 6px",
+              borderRadius: 7,
+              letterSpacing: 0,
+            }}
+            title={`Same finding on ${issue.groupCount} instances of ${issue.componentName ?? "this component"}`}
+          >
+            ×{issue.groupCount}
+          </span>
+        ) : null}
       </span>
     </button>
   );

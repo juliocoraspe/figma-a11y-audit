@@ -21,6 +21,14 @@ A Figma plugin that audits design files against **WCAG 2.2 AA** and helps annota
 
 Results are numbered pills painted on the canvas (color = severity), matching the row numbers in the plugin's list. Interactivity detection uses prototype reactions first, naming heuristics second.
 
+### Propose → approve → apply → verify
+
+The audit is proactive, not just diagnostic:
+
+- **Proposed changes** — after a scan, every fix the plugin can compute (contrast recolors with the exact target hex, missing focus variants, weak indicators) is batched into one reviewable proposal. Approve once: applied transactionally (a single undo step reverts everything), then the page is **re-audited automatically** to verify the fixes actually resolved the criteria.
+- **Component grouping** — identical findings across N instances of the same component collapse into one row (×N badge); fixing or dismissing the row fans out to every instance. 118 raw findings become a short list of root causes.
+- **Persistent dismissals** — dismissed findings are remembered in the file (page plugin data), so re-scans never nag about decisions already made. One-click restore.
+
 ### Annotate — what automation can't decide
 
 - **Tab order** — detects interactive elements (whole page or selected frame), lets you assign keyboard focus sequence by clicking, and paints it on canvas: purple numbered squares plus a dashed line tracing the path 1 → N.

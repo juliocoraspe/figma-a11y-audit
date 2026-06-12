@@ -203,6 +203,10 @@ ollama pull llama3.2-vision</code></pre>
 (function () {
   var frame = document.getElementById("plugin");
 
+  // Demo-side state so the mock behaves like the real sandbox.
+  var fixedIds = new Set();
+  var dismissedIds = new Set();
+
   var ISSUES = [
     {
       id: "01-text-contrast::demo-1",
@@ -212,6 +216,20 @@ ollama pull llama3.2-vision</code></pre>
       nodeId: "demo-1",
       nodePath: ["Login", "Form", "Hint text"],
       wcagCriterion: "1.4.3", wcagLevel: "AA",
+      componentId: "comp-hint", componentName: "Form / Hint",
+      details: { ratio: 2.54, threshold: 4.5, isLarge: false, textColor: "#9CA3AF", backgroundColor: "#FFFFFF", backgroundKind: "solid", fontSize: 14, fontStyle: "Regular" },
+      fix: { type: "manual", suggestion: "Darken or lighten the text until the ratio reaches 4.5:1." },
+      status: "open"
+    },
+    {
+      id: "01-text-contrast::demo-1b",
+      checkId: "01-text-contrast",
+      severity: "critical",
+      message: "Text #9CA3AF on #FFFFFF has contrast 2.54:1 (needs 4.5:1 for normal text at 14px, AA)",
+      nodeId: "demo-1b",
+      nodePath: ["Signup", "Form", "Hint text"],
+      wcagCriterion: "1.4.3", wcagLevel: "AA",
+      componentId: "comp-hint", componentName: "Form / Hint",
       details: { ratio: 2.54, threshold: 4.5, isLarge: false, textColor: "#9CA3AF", backgroundColor: "#FFFFFF", backgroundKind: "solid", fontSize: 14, fontStyle: "Regular" },
       fix: { type: "manual", suggestion: "Darken or lighten the text until the ratio reaches 4.5:1." },
       status: "open"
@@ -335,21 +353,53 @@ ollama pull llama3.2-vision</code></pre>
           reply({ type: "scan-progress", current: 200, total: 240, checkRunning: "running checks" });
         }, 500);
         setTimeout(function () {
+          // Stateful like the real sandbox: fixed issues don't re-flag,
+          // dismissed ones come back marked as dismissed.
+          var issues = JSON.parse(JSON.stringify(ISSUES))
+            .filter(function (i) { return !fixedIds.has(i.id); })
+            .map(function (i) {
+              if (dismissedIds.has(i.id)) i.status = "dismissed";
+              return i;
+            });
           reply({
             type: "scan-complete",
-            issues: JSON.parse(JSON.stringify(ISSUES)),
+            issues: issues,
             meta: { totalNodes: 240, durationMs: 318 }
           });
         }, 800);
         break;
 
       case "apply-fix":
+        fixedIds.add(msg.issueId);
         reply({
           type: "fix-applied",
           issueId: msg.issueId,
           before: {},
           after: { textColor: msg.params && msg.params.targetHex }
         });
+        break;
+
+      case "apply-fix-batch":
+        (msg.items || []).forEach(function (item) {
+          fixedIds.add(item.issueId);
+          reply({
+            type: "fix-applied",
+            issueId: item.issueId,
+            before: {},
+            after: { textColor: item.params && item.params.targetHex }
+          });
+        });
+        setTimeout(function () {
+          reply({ type: "batch-fix-complete", applied: (msg.items || []).length, failed: 0 });
+        }, 400);
+        break;
+
+      case "dismiss-issue":
+        dismissedIds.add(msg.issueId);
+        break;
+
+      case "restore-dismissed":
+        dismissedIds.clear();
         break;
 
       case "tab-order-request":

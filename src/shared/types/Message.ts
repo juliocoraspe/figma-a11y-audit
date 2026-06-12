@@ -38,6 +38,7 @@ export type SandboxToUI =
       after: Record<string, unknown>;
     }
   | { type: "error"; code: string; message: string }
+  | { type: "batch-fix-complete"; applied: number; failed: number }
   | {
       type: "tab-order-detected";
       frameId: string;
@@ -88,6 +89,21 @@ export type UIToSandbox =
       params: Record<string, unknown>;
     }
   | { type: "dismiss-issue"; issueId: string }
+  /** Forget all persisted dismissals on the current page. */
+  | { type: "restore-dismissed" }
+  /**
+   * Apply a reviewed batch of fixes transactionally (single undo step).
+   * The sandbox replies with one fix-applied per item, then
+   * batch-fix-complete.
+   */
+  | {
+      type: "apply-fix-batch";
+      items: Array<{
+        issueId: string;
+        checkId: Issue["checkId"];
+        params: Record<string, unknown>;
+      }>;
+    }
   /** frameId omitted: sandbox falls back to the selected frame or the page. */
   | { type: "tab-order-request"; frameId?: string }
   /** Export image-bearing nodes in the given scope as PNG. */

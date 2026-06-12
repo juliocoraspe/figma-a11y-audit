@@ -53,9 +53,12 @@ export async function runScan(opts: RunnerOptions): Promise<RunnerResult> {
   // needed for reading, but harmless.
   await Promise.resolve();
 
-  // Pass 1 — flatten and adapt.
+  // Pass 1 — flatten and adapt. componentOf records, for every node inside
+  // an instance, which main component it ultimately comes from — the UI
+  // groups identical findings across instances with it.
   const order: SceneNode[] = [];
-  collect(page, order);
+  const componentOf = new Map<string, { id: string; name: string }>();
+  collect(page, order, componentOf, null);
 
   const shapes = new Map<string, NodeShape>();
   for (const sn of order) {
@@ -111,6 +114,15 @@ export async function runScan(opts: RunnerOptions): Promise<RunnerResult> {
     opts.onProgress(order.length, order.length, "done");
   }
 
+  // Attach component provenance so the UI can group per-instance repeats.
+  for (const issue of issues) {
+    const comp = componentOf.get(issue.nodeId);
+    if (comp) {
+      issue.componentId = comp.id;
+      issue.componentName = comp.name;
+    }
+  }
+
   return {
     issues,
     totalNodes: order.length,
@@ -120,17 +132,42 @@ export async function runScan(opts: RunnerOptions): Promise<RunnerResult> {
 
 // ---------- collection ----------
 
-function collect(node: BaseNode, out: SceneNode[]): void {
+function collect(
+  node: BaseNode,
+  out: SceneNode[],
+  componentOf: Map<string, { id: string; name: string }>,
+  comp: { id: string; name: string } | null,
+): void {
+  let nextComp = comp;
   if (isSceneNode(node)) {
     // Hidden subtrees can't fail the user: children of an invisible parent
     // report visible === true, so pruning here is the only correct cutoff.
     if (!node.visible) return;
     // Never audit our own overlays (issues, tab order, alt text).
     if (node.type === "FRAME" && node.name.startsWith(A11Y_FRAME_PREFIX)) return;
+
+    // Entering an instance: everything below traces to its main component.
+    // Innermost instance wins (an icon inside a button groups by the icon).
+    if (node.type === "INSTANCE") {
+      try {
+        const mc = (node as InstanceNode).mainComponent;
+        if (mc) {
+          const name =
+            mc.parent && mc.parent.type === "COMPONENT_SET"
+              ? mc.parent.name
+              : mc.name;
+          nextComp = { id: mc.id, name };
+        }
+      } catch {
+        // mainComponent can throw under dynamic-page; keep outer context.
+      }
+    }
+
     out.push(node);
+    if (nextComp) componentOf.set(node.id, nextComp);
   }
   if ("children" in node) {
-    for (const c of node.children) collect(c, out);
+    for (const c of node.children) collect(c, out, componentOf, nextComp);
   }
 }
 

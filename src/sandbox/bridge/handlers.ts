@@ -60,8 +60,14 @@ export async function handleUIMessage(
     case "apply-fix":
       await handleApplyFix(msg.issueId, msg.checkId, msg.params, state);
       return;
+    case "apply-fix-batch":
+      await handleApplyFixBatch(msg.items, state);
+      return;
     case "dismiss-issue":
       handleDismissIssue(msg.issueId, state);
+      return;
+    case "restore-dismissed":
+      saveDismissed(new Set());
       return;
     case "tab-order-request":
       handleTabOrderRequest(msg.frameId);
@@ -110,6 +116,22 @@ async function handleScanRequest(
       },
     });
 
+    // Re-apply persisted dismissals: the file remembers human decisions
+    // across sessions, so a re-scan never nags about what was already
+    // reviewed. Stale ids (issues that no longer occur) are pruned so the
+    // store can't grow without bound.
+    const dismissed = loadDismissed();
+    if (dismissed.size > 0) {
+      const present = new Set<string>();
+      for (const issue of result.issues) {
+        if (dismissed.has(issue.id)) {
+          issue.status = "dismissed";
+          present.add(issue.id);
+        }
+      }
+      if (present.size !== dismissed.size) saveDismissed(present);
+    }
+
     state.lastIssues = result.issues;
 
     // Note: we do NOT paint the overlay here. The UI sorts the issues,
@@ -146,8 +168,39 @@ function handleJumpToNode(nodeId: string): void {
 
 function handleDismissIssue(issueId: string, state: SandboxState): void {
   const issue = state.lastIssues.find((i) => i.id === issueId);
-  if (!issue) return;
-  issue.status = "dismissed";
+  if (issue) issue.status = "dismissed";
+
+  // Persist regardless of whether the issue is in the in-memory list:
+  // issue ids are stable (checkId::nodeId), so the dismissal sticks across
+  // sessions and re-scans.
+  const dismissed = loadDismissed();
+  if (!dismissed.has(issueId)) {
+    dismissed.add(issueId);
+    saveDismissed(dismissed);
+  }
+}
+
+/** Page-level plugin data key holding the dismissed issue ids. */
+const DISMISSED_KEY = "a11y-dismissed";
+
+function loadDismissed(): Set<string> {
+  try {
+    const raw = figma.currentPage.getPluginData(DISMISSED_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? new Set(parsed.filter((x): x is string => typeof x === "string"))
+      : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDismissed(ids: Set<string>): void {
+  figma.currentPage.setPluginData(
+    DISMISSED_KEY,
+    ids.size > 0 ? JSON.stringify([...ids]) : "",
+  );
 }
 
 /**
@@ -195,6 +248,57 @@ async function handleApplyFix(
     const message = err instanceof Error ? err.message : String(err);
     postUI({ type: "error", code: "FIX_FAILED", message });
   }
+}
+
+/**
+ * Reviewed batch from the UI's "proposed changes" panel. Applies every item
+ * through the same per-check fix functions (each emits its own fix-applied),
+ * commits the whole batch as a single undo step, and reports the tally.
+ */
+async function handleApplyFixBatch(
+  items: Array<{
+    issueId: string;
+    checkId: Issue["checkId"];
+    params: Record<string, unknown>;
+  }>,
+  state: SandboxState,
+): Promise<void> {
+  let applied = 0;
+  let failed = 0;
+
+  for (const item of items) {
+    const issue = state.lastIssues.find((i) => i.id === item.issueId);
+    if (!issue || issue.status !== "open") {
+      failed++;
+      continue;
+    }
+    try {
+      switch (item.checkId) {
+        case "01-text-contrast":
+          await fixTextContrast(issue, item.params);
+          break;
+        case "05-focus-defined":
+          await fixCreateFocusVariant(issue);
+          break;
+        case "06-focus-visibility":
+          await fixStrengthenFocusIndicator(issue);
+          break;
+        default:
+          failed++;
+          continue;
+      }
+      // The fix functions flip status on success; re-read it (TS narrowed
+      // `status` to "open" above and can't see the mutation).
+      if ((issue.status as Issue["status"]) === "resolved") applied++;
+      else failed++;
+    } catch (err) {
+      console.warn(`[a11y] batch fix failed for ${item.issueId}`, err);
+      failed++;
+    }
+  }
+
+  figma.commitUndo();
+  postUI({ type: "batch-fix-complete", applied, failed });
 }
 
 async function fixTextContrast(
