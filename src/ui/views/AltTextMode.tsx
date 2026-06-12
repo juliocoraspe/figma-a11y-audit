@@ -183,6 +183,7 @@ export default function AltTextMode() {
       let streamed = "";
       const finalText = await ollamaClient.generateAltTextFromAnalysis(
         analysis,
+        current.path.join(" / "),
         (chunk) => {
           streamed += chunk;
           patchSelected({ altText: streamed });

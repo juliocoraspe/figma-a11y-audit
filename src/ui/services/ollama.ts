@@ -242,28 +242,44 @@ export class OllamaClient {
   }
 
   /**
-   * Stage 2 of alt text: distill the visual analysis into one vivid,
+   * Stage 2 of alt text: distill the visual analysis into one
    * screen-reader-ready sentence. Text-only call — the grounding already
    * happened in stage 1 — so it's fast.
+   *
+   * The target register is "purpose in context": these images are UI
+   * elements whose inner content may be swapped later, so the alt text
+   * must name what the element IS FOR (inferred from the analysis plus the
+   * layer path), keeping at most one distinguishing visual detail — neither
+   * a generic label nor a literal scene transcription.
    */
   async generateAltTextFromAnalysis(
     analysis: string,
+    context?: string,
     onChunk?: (chunk: string) => void,
   ): Promise<string> {
     try {
       const raw = await this.streamGenerate(
         {
           prompt: [
-            "Using ONLY the visual analysis below, write one alt-text sentence for screen-reader users.",
-            "Rules:",
-            "- Lead with the most distinctive visual subject, not its role or category.",
-            "- Vivid, concrete language; keep the key color, action or visible text when it matters.",
-            "- NEVER use generic words like: image, picture, photo, graphic, icon, button, container, element, screenshot, UI, component.",
-            "- Under 125 characters. No quotes. No preamble like 'Alt text:' or 'The image shows'. Output the sentence only.",
+            "You are writing alt text for an element inside a product's user interface (a design that will become HTML).",
+            context ? `Element location in the design: ${context}` : "",
             "",
-            "Visual analysis:",
+            "Visual analysis of the element's current appearance:",
             analysis,
-          ].join("\n"),
+            "",
+            "Write ONE alt-text sentence that:",
+            "- Names what this element IS and its purpose in the interface (e.g. profile photo, hero illustration, product thumbnail, map preview, brand logo), inferred from the analysis and the location.",
+            "- Adds at most ONE distinguishing visual detail about the main subject, and only if it helps the user understand the element's meaning. Never describe the background or composition.",
+            "- Stays valid if the inner content is swapped later: do NOT inventory colors, composition or transcribe the scene.",
+            "- Is never just a generic label: avoid bare words like image, picture, graphic, icon, button, container, element, screenshot, UI, component.",
+            "",
+            "Right level (examples): 'User avatar photo next to the contact's name' · 'Hand-drawn paper plane illustration in the app header' · 'Thumbnail preview of the shared memory photo'.",
+            "Wrong: 'Decorative container' (too generic). Wrong: 'A black puppy with large eyes gazes at the camera on rustic wooden planks' (literal content that may change).",
+            "",
+            "Under 125 characters. No quotes. No preamble like 'Alt text:'. Output the sentence only.",
+          ]
+            .filter((line) => line !== null)
+            .join("\n"),
         },
         onChunk,
       );
