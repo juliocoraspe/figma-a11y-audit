@@ -11,6 +11,7 @@ import "../styles/AnnotateView.css";
 import TabOrderMode from "./TabOrderMode";
 import AltTextMode from "./AltTextMode";
 import LanguageMode from "./LanguageMode";
+import { OverlayLegend } from "../components/OverlayLegend";
 
 type AnnotateMode = "tab-order" | "alt-text" | "language";
 
@@ -28,6 +29,9 @@ export default function AnnotateView({ onBack }: AnnotateModeProps) {
           ← Back
         </button>
         <h2 className="annotate-title">Annotate</h2>
+        <div style={{ marginLeft: "auto" }}>
+          <OverlayLegend />
+        </div>
       </div>
 
       <div className="annotate-tabs">

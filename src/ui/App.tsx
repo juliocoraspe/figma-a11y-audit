@@ -7,6 +7,7 @@ import { ResultsListView } from "@ui/views/ResultsListView";
 import { DetailDrawer } from "@ui/views/DetailDrawer";
 import AnnotateView from "@ui/views/AnnotateView";
 import { SettingsDrawer } from "@ui/components/SettingsDrawer";
+import { OverlayLegend } from "@ui/components/OverlayLegend";
 
 type Phase =
   | { kind: "welcome" }
@@ -174,20 +175,23 @@ export function App() {
             >
               Annotate
             </button>
-            <button
-              onClick={() => setSettingsOpen(!settingsOpen)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#666",
-                cursor: "pointer",
-                fontSize: "16px",
-                padding: "4px 8px",
-              }}
-              title="Settings"
-            >
-              ⚙️
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <OverlayLegend />
+              <button
+                onClick={() => setSettingsOpen(!settingsOpen)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#666",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  padding: "4px 8px",
+                }}
+                title="Settings"
+              >
+                ⚙️
+              </button>
+            </div>
           </div>
           <ResultsListView
             issues={visibleIssues}

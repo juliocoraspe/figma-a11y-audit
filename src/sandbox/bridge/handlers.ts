@@ -10,8 +10,14 @@
 import type { Issue } from "@shared/types/Issue";
 import type { SandboxToUI, UIToSandbox } from "@shared/types/Message";
 import { assertNever } from "@shared/types/Message";
+import { A11Y_FRAME_PREFIX } from "@shared/constants";
 import { runScan } from "@sandbox/detect/runner";
-import { paintOverlay, clearOverlays } from "@sandbox/overlay/manager";
+import {
+  clearOverlays,
+  paintAltBadge,
+  paintOverlay,
+  paintTabOrderOverlay,
+} from "@sandbox/overlay/manager";
 
 export interface SandboxState {
   lastIssues: Issue[];
@@ -59,11 +65,14 @@ export async function handleUIMessage(
     case "export-images-request":
       await handleExportImagesRequest();
       return;
+    case "tab-order-overlay":
+      await paintTabOrderOverlay(msg.items);
+      return;
     case "annotate-tab-order":
       handleAnnotateTabOrder(msg.frameId, msg.orderMap);
       return;
     case "annotate-alt-text":
-      handleAnnotateAltText(msg.nodeId, msg.text, msg.decorative);
+      await handleAnnotateAltText(msg.nodeId, msg.text, msg.decorative);
       return;
     case "annotate-language":
       handleAnnotateLanguage(msg.frameId, msg.lang);
@@ -241,7 +250,6 @@ function hexToRgbCanvas(hex: string): RGB {
 
 // Annotate mode handlers (v0.3)
 
-const OVERLAY_NAME = "[a11y-overlay]";
 const INTERACTIVE_NAME =
   /(?:^|[^a-z])(button|btn|cta|link|input|field|checkbox|radio|toggle|switch|tab|chip|menu-?item|icon-button|select)(?:[^a-z]|$)/i;
 
@@ -283,7 +291,7 @@ function handleTabOrderRequest(frameId?: string): void {
 function walkForInteractive(node: BaseNode, out: SceneNode[]): void {
   if ("visible" in node) {
     if (!node.visible) return;
-    if (node.type === "FRAME" && node.name === OVERLAY_NAME) return;
+    if (node.type === "FRAME" && node.name.startsWith(A11Y_FRAME_PREFIX)) return;
 
     const hasReactions =
       "reactions" in node && ((node.reactions?.length ?? 0) > 0);
@@ -370,7 +378,7 @@ async function handleExportImagesRequest(): Promise<void> {
 function walkForImages(node: BaseNode, out: SceneNode[]): void {
   if ("visible" in node) {
     if (!node.visible) return;
-    if (node.type === "FRAME" && node.name === OVERLAY_NAME) return;
+    if (node.type === "FRAME" && node.name.startsWith(A11Y_FRAME_PREFIX)) return;
 
     if (hasImageFill(node)) {
       out.push(node);
@@ -410,25 +418,27 @@ function nodePathOf(node: SceneNode): string[] {
   return names;
 }
 
-function handleAnnotateAltText(
+async function handleAnnotateAltText(
   nodeId: string,
   text: string,
   decorative: boolean,
-): void {
+): Promise<void> {
   // v0.3: store alt text in node via figma.variables or metadata (v1.1+ uses clientStorage)
   const node = figma.getNodeById(nodeId);
   if (!node) {
-    postUI({
-      type: "error",
-      code: "NODE_NOT_FOUND",
-      message: `Node ${nodeId} not found.`,
-    });
+    // Uploaded files (nodeId "upload-...") have no canvas node; nothing to badge.
+    postUI({ type: "image-alt-text-saved", nodeId });
     return;
   }
 
   // Temporary storage: log to console; v1.1+ will persist via clientStorage
   console.log(
     `[a11y] Alt text for ${nodeId}: ${decorative ? "[decorative]" : text}`,
+  );
+
+  await paintAltBadge(
+    nodeId,
+    decorative ? "decorative" : text ? "alt" : "none",
   );
 
   postUI({ type: "image-alt-text-saved", nodeId });

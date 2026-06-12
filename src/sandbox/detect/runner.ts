@@ -17,7 +17,7 @@ import type {
   TextSegmentShape,
   VariantInfo,
 } from "@shared/types/NodeShape";
-import { OVERLAY_FRAME_NAME, PROGRESS_EMIT_EVERY } from "@shared/constants";
+import { A11Y_FRAME_PREFIX, PROGRESS_EMIT_EVERY } from "@shared/constants";
 import { checkTextContrast } from "./checks/01-text-contrast";
 import { checkUiContrast } from "./checks/02-ui-contrast";
 import { checkTapTarget } from "./checks/03-tap-target";
@@ -125,8 +125,8 @@ function collect(node: BaseNode, out: SceneNode[]): void {
     // Hidden subtrees can't fail the user: children of an invisible parent
     // report visible === true, so pruning here is the only correct cutoff.
     if (!node.visible) return;
-    // Never audit our own diagnostic overlay.
-    if (node.type === "FRAME" && node.name === OVERLAY_FRAME_NAME) return;
+    // Never audit our own overlays (issues, tab order, alt text).
+    if (node.type === "FRAME" && node.name.startsWith(A11Y_FRAME_PREFIX)) return;
     out.push(node);
   }
   if ("children" in node) {

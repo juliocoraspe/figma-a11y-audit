@@ -80,6 +80,11 @@ export type UIToSandbox =
   | { type: "tab-order-request"; frameId?: string }
   /** Export image-bearing nodes (selection first, else current page) as PNG. */
   | { type: "export-images-request" }
+  /** Repaint the tab-order canvas overlay. Empty items array clears it. */
+  | {
+      type: "tab-order-overlay";
+      items: Array<{ nodeId: string; order: number }>;
+    }
   | {
       type: "annotate-tab-order";
       frameId: string;

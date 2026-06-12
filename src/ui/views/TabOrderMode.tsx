@@ -58,6 +58,16 @@ export default function TabOrderMode() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Mirror every order change onto the canvas: purple numbered squares plus
+  // a dashed path line. An empty map clears the overlay.
+  useEffect(() => {
+    const items = Object.entries(orderMap).map(([nodeId, order]) => ({
+      nodeId,
+      order,
+    }));
+    postMessage({ type: "tab-order-overlay", items });
+  }, [orderMap, postMessage]);
+
   /** Click to assign the next free number; click again to unassign. */
   const handleToggleElement = (nodeId: string) => {
     setOrderMap((prev) => {

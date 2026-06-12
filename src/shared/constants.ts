@@ -26,6 +26,22 @@ export const OVERLAY_DOT_PREFIX = "dot-";
 export const OVERLAY_DOT_SIZE = 16;
 export const OVERLAY_HALO_WIDTH = 2;
 
+/**
+ * Annotation overlays (tab order, alt text) live in their own locked frames,
+ * visually distinct from the issue dots:
+ *   - issues:    numbered circles/pills, severity color, top-RIGHT corner
+ *   - tab order: numbered purple SQUARES, top-LEFT corner + dashed path line
+ *   - alt text:  green ALT / gray DECO chip, bottom-left corner
+ * Every overlay frame name starts with this prefix so scans can skip them all.
+ */
+export const A11Y_FRAME_PREFIX = "[a11y-";
+export const TAB_OVERLAY_FRAME_NAME = "[a11y-tab-order]";
+export const ALT_OVERLAY_FRAME_NAME = "[a11y-alt-text]";
+export const TAB_BADGE_HEX = "#7C3AED";
+export const TAB_BADGE_SIZE = 20;
+export const ALT_BADGE_HEX = "#16A34A";
+export const ALT_DECO_HEX = "#6B7280";
+
 /** Severity hex codes. Sandbox normalizes to {r,g,b} 0..1; UI uses as-is. */
 export const SEVERITY_HEX: Record<Severity, string> = {
   critical: "#DC2626",
