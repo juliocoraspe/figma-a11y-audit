@@ -4,7 +4,12 @@
  */
 
 import type { UIToSandbox } from "@shared/types/Message";
-import { createState, handleUIMessage } from "@sandbox/bridge/handlers";
+import {
+  consumeProgrammaticSelection,
+  createState,
+  handleUIMessage,
+  markProgrammaticSelection,
+} from "@sandbox/bridge/handlers";
 import { clearOverlays, resolveDotSelection } from "@sandbox/overlay/manager";
 
 const state = createState();
@@ -16,7 +21,13 @@ figma.showUI(__html__, { width: 360, height: 560, themeColors: true });
 clearOverlays().catch((err) => console.error("[a11y] startup cleanup", err));
 
 figma.ui.onmessage = (msg: UIToSandbox) => {
-  void handleUIMessage(msg, state);
+  handleUIMessage(msg, state).catch((err) => {
+    // Never die silently: an unhandled throw here would leave the UI
+    // hanging on whatever loading state it was in.
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[a11y] handler failed", msg.type, err);
+    figma.ui.postMessage({ type: "error", code: "HANDLER_FAILED", message });
+  });
 };
 
 // Click-on-dot: when the user selects a dot on the canvas, we forward the
@@ -24,6 +35,10 @@ figma.ui.onmessage = (msg: UIToSandbox) => {
 // selection to the real node so the user is not stuck with a locked dot
 // selected.
 figma.on("selectionchange", () => {
+  // Selections we made ourselves (jump-to-node, dot redirect, focus fixes)
+  // must not echo back as canvas picks.
+  const programmatic = consumeProgrammaticSelection();
+
   const sel = figma.currentPage.selection;
   if (sel.length !== 1) return;
   const single = sel[0];
@@ -34,7 +49,7 @@ figma.on("selectionchange", () => {
     // A real design node (overlays are locked, so canvas clicks fall
     // through to the element beneath). Tab Order mode listens to this for
     // canvas picking; other views ignore it.
-    if (!single.name.startsWith("[a11y-")) {
+    if (!programmatic && !single.name.startsWith("[a11y-")) {
       figma.ui.postMessage({
         type: "canvas-node-selected",
         nodeId: single.id,
@@ -60,6 +75,7 @@ figma.on("selectionchange", () => {
 
   const target = figma.getNodeById(resolved.nodeId);
   if (target && target.type !== "DOCUMENT" && target.type !== "PAGE") {
+    markProgrammaticSelection();
     figma.currentPage.selection = [target as SceneNode];
   }
 });

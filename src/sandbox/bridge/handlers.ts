@@ -32,6 +32,24 @@ export function createState(): SandboxState {
   return { lastIssues: [], scanInFlight: false };
 }
 
+/**
+ * Programmatic selection guard. jump-to-node, dot redirects and the focus
+ * fixes set figma.currentPage.selection themselves; without this flag the
+ * selectionchange listener would echo those as canvas-node-selected and
+ * Tab Order's canvas picking would add phantom stops.
+ */
+let programmaticSelection = false;
+
+export function markProgrammaticSelection(): void {
+  programmaticSelection = true;
+}
+
+export function consumeProgrammaticSelection(): boolean {
+  const was = programmaticSelection;
+  programmaticSelection = false;
+  return was;
+}
+
 function postUI(msg: SandboxToUI): void {
   figma.ui.postMessage(msg);
 }
@@ -163,6 +181,7 @@ function handleJumpToNode(nodeId: string): void {
   }
   const sceneNode = node as SceneNode;
   figma.viewport.scrollAndZoomIntoView([sceneNode]);
+  markProgrammaticSelection();
   figma.currentPage.selection = [sceneNode];
 }
 
@@ -422,6 +441,7 @@ async function fixCreateFocusVariant(issue: Issue): Promise<void> {
   applyFocusRing(clone);
   issue.status = "resolved";
 
+  markProgrammaticSelection();
   figma.currentPage.selection = [clone];
   figma.viewport.scrollAndZoomIntoView([clone]);
 
@@ -475,6 +495,7 @@ async function fixStrengthenFocusIndicator(issue: Issue): Promise<void> {
   }
 
   issue.status = "resolved";
+  markProgrammaticSelection();
   figma.currentPage.selection = [focusVariant];
   figma.viewport.scrollAndZoomIntoView([focusVariant]);
 
@@ -582,8 +603,23 @@ function resolveAnnotateRoot(frameId?: string): BaseNode | null {
   return figma.currentPage;
 }
 
+/**
+ * Tab-order scope. Canvas picking works by *selecting* elements, so the
+ * generic selection-first resolver would re-scope detection to whatever the
+ * user last clicked and "lose" the page. Here only a TOP-LEVEL container
+ * (a screen frame, direct child of the page) counts as intentional scoping;
+ * anything else falls back to the whole page.
+ */
+function resolveTabOrderRoot(frameId?: string): BaseNode | null {
+  if (frameId) return figma.getNodeById(frameId);
+  for (const node of figma.currentPage.selection) {
+    if ("children" in node && node.parent === figma.currentPage) return node;
+  }
+  return figma.currentPage;
+}
+
 function handleTabOrderRequest(frameId?: string): void {
-  const root = resolveAnnotateRoot(frameId);
+  const root = resolveTabOrderRoot(frameId);
   if (!root) {
     postUI({
       type: "error",
@@ -617,6 +653,7 @@ function handleTabOrderRequest(frameId?: string): void {
   postUI({
     type: "tab-order-detected",
     frameId: root.id,
+    frameName: root.type === "PAGE" ? `Page “${root.name}”` : `Frame “${root.name}”`,
     nodes,
     saved: pruned,
   });

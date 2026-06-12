@@ -42,6 +42,8 @@ export type SandboxToUI =
   | {
       type: "tab-order-detected";
       frameId: string;
+      /** Human-readable scope ("Page 1" or a top-level frame's name). */
+      frameName: string;
       nodes: Array<{ nodeId: string; name: string }>;
       /**
        * Previously saved assignment for this frame (nodeId -> order),

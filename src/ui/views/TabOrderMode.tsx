@@ -25,6 +25,7 @@ interface Element {
 export default function TabOrderMode() {
   const { postMessage, onMessage } = useUIBridge();
   const [frameId, setFrameId] = useState<string | null>(null);
+  const [frameName, setFrameName] = useState("");
   const [elements, setElements] = useState<Element[]>([]);
   const [orderMap, setOrderMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,10 @@ export default function TabOrderMode() {
   const [canvasPick, setCanvasPick] = useState(true);
   const canvasPickRef = useRef(canvasPick);
   canvasPickRef.current = canvasPick;
+  // Mirror for reading the latest order inside message handlers without
+  // nesting state updates.
+  const orderMapRef = useRef(orderMap);
+  orderMapRef.current = orderMap;
 
   // Subscribe to sandbox responses
   useEffect(() => {
@@ -39,14 +44,15 @@ export default function TabOrderMode() {
       switch (msg.type) {
         case "tab-order-detected":
           setFrameId(msg.frameId);
+          setFrameName(msg.frameName);
           setElements(msg.nodes.map((n) => ({ nodeId: n.nodeId, name: n.name })));
           setOrderMap(msg.saved);
           setLoading(false);
-          if (Object.keys(msg.saved).length > 0) {
-            setStatusText(
-              `Loaded saved order (${Object.keys(msg.saved).length} stops) — edit and save again.`,
-            );
-          }
+          setStatusText(
+            Object.keys(msg.saved).length > 0
+              ? `Loaded saved order (${Object.keys(msg.saved).length} stops) — edit and save again.`
+              : `Detected ${msg.nodes.length} element(s) in ${msg.frameName}. Auto-assign for a first pass, then adjust.`,
+          );
           return;
         case "tab-order-saved":
           setStatusText(
@@ -56,21 +62,23 @@ export default function TabOrderMode() {
         case "canvas-node-selected": {
           if (!canvasPickRef.current) return;
           const { nodeId, name } = msg;
-          setElements((prevEls) => {
-            const exists = prevEls.some((el) => el.nodeId === nodeId);
-            setOrderMap((prevOrder) => {
-              if (prevOrder[nodeId]) {
-                setStatusText(
-                  `'${name}' is already stop #${prevOrder[nodeId]} — use ↑ ↓ ✕ in the list to modify.`,
-                );
-                return prevOrder;
-              }
-              const next = Object.keys(prevOrder).length + 1;
-              setStatusText(`➕ Added '${name}' as stop #${next} (from canvas).`);
-              return { ...prevOrder, [nodeId]: next };
-            });
-            return exists ? prevEls : [...prevEls, { nodeId, name }];
-          });
+          const existing = orderMapRef.current[nodeId];
+          if (existing) {
+            setStatusText(
+              `'${name}' is already stop #${existing} — use ↑ ↓ ✕ in the list to modify.`,
+            );
+            return;
+          }
+          const next = Object.keys(orderMapRef.current).length + 1;
+          setElements((prev) =>
+            prev.some((el) => el.nodeId === nodeId)
+              ? prev
+              : [...prev, { nodeId, name }],
+          );
+          setOrderMap((prev) =>
+            prev[nodeId] ? prev : { ...prev, [nodeId]: next },
+          );
+          setStatusText(`➕ Added '${name}' as stop #${next} (from canvas).`);
           return;
         }
         case "error":
@@ -188,6 +196,11 @@ export default function TabOrderMode() {
         <>
           <div className="tab-order-stats">
             <p>
+              {frameName && (
+                <>
+                  <strong>Scope:</strong> {frameName} ·{" "}
+                </>
+              )}
               <strong>Interactive elements:</strong> {elements.length}
               {assignedCount > 0 && (
                 <>
