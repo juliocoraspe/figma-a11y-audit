@@ -51,6 +51,8 @@ export default function AltTextMode() {
   const [generating, setGenerating] = useState(false);
   const [ollamaStatus, setOllamaStatus] = useState("unknown");
   const [statusText, setStatusText] = useState("");
+  /** Live stage-1 output: the model's visual read, shown above the field. */
+  const [analysisText, setAnalysisText] = useState("");
 
   useEffect(() => {
     return ollamaClient.onStatusChange(setOllamaStatus);
@@ -120,6 +122,7 @@ export default function AltTextMode() {
   const handleSelect = (nodeId: string) => {
     setSelectedId(nodeId);
     setStatusText("");
+    setAnalysisText("");
     postMessage({ type: "jump-to-node", nodeId });
   };
 
@@ -160,18 +163,35 @@ export default function AltTextMode() {
         }
       }
 
-      setStatusText("Analyzing image (first run loads the model, ~30s)...");
+      // Stage 1 — visual analysis, streamed into its own box so the user
+      // watches the model "look" before any suggestion exists.
+      setStatusText("🔍 Analyzing image (first run loads the model, ~30s)...");
+      setAnalysisText("");
+      let analysisStream = "";
+      const analysis = await ollamaClient.analyzeImage(
+        current.base64,
+        (chunk) => {
+          analysisStream += chunk;
+          setAnalysisText(analysisStream);
+        },
+      );
+
+      // Stage 2 — distill the analysis into one vivid sentence; only now
+      // does the Description field start filling in.
+      setStatusText("✍️ Writing alt text from the analysis...");
       patchSelected({ altText: "", decorative: false, saved: false });
       let streamed = "";
-      const finalText = await ollamaClient.generateAltText(
-        current.base64,
+      const finalText = await ollamaClient.generateAltTextFromAnalysis(
+        analysis,
         (chunk) => {
           streamed += chunk;
           patchSelected({ altText: streamed });
         },
       );
       patchSelected({ altText: finalText, saved: false });
-      setStatusText("Review the suggestion, edit if needed, then Approve & assign.");
+      setStatusText(
+        "✅ Suggested from the analysis above. Edit if needed, then Approve & assign.",
+      );
     } catch (err) {
       setStatusText(`❌ ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -329,9 +349,45 @@ export default function AltTextMode() {
                   }}
                 />
                 <div className="alt-text-image-placeholder">
-                  {current.path.join(" / ")}
+                  Layer: {current.path.join(" / ")}
                 </div>
               </div>
+
+              {analysisText && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    border: "1px solid #ddd",
+                    background: "#FAFAF7",
+                    padding: "6px 8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 9,
+                      letterSpacing: "0.08em",
+                      fontFamily: "var(--font-mono, monospace)",
+                      color: "#1e3a5f",
+                    }}
+                  >
+                    🔍 AI VISUAL ANALYSIS
+                  </span>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      lineHeight: 1.5,
+                      color: "#444",
+                      maxHeight: 90,
+                      overflowY: "auto",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {analysisText}
+                  </div>
+                </div>
+              )}
 
               <div className="alt-text-input-group">
                 <label>Description:</label>

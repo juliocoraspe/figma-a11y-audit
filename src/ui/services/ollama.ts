@@ -170,68 +170,166 @@ export class OllamaClient {
   }
 
   /**
-   * Generate alt text for an image using llama3.2-vision.
-   * imageBase64: base64-encoded image (without data: prefix)
-   * onChunk: callback for streaming response
+   * Shared streaming call to /api/generate. Returns the full text and
+   * forwards each token to onChunk for live display.
+   */
+  private async streamGenerate(
+    body: Record<string, unknown>,
+    onChunk?: (chunk: string) => void,
+  ): Promise<string> {
+    const res = await fetch(`${this.endpoint}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: this.model, stream: true, ...body }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Ollama error: ${res.statusText}`);
+    }
+
+    let fullText = "";
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("No response body");
+
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split("\n");
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const obj = JSON.parse(line);
+          if (obj.response) {
+            fullText += obj.response;
+            onChunk?.(obj.response);
+          }
+        } catch {
+          // Ignore parse errors in streaming
+        }
+      }
+    }
+
+    return fullText.trim();
+  }
+
+  /**
+   * Stage 1 of alt text: a rich visual read of the image, streamed so the
+   * UI can show the analysis happening before any suggestion appears.
+   */
+  async analyzeImage(
+    imageBase64: string,
+    onChunk?: (chunk: string) => void,
+  ): Promise<string> {
+    try {
+      return await this.streamGenerate(
+        {
+          prompt:
+            "Describe this image in rich visual detail for someone who cannot see it: " +
+            "the main subject, what it is doing, the setting, dominant colors, " +
+            "composition, and any visible text (quote it exactly). " +
+            "3 to 5 short sentences. Do not classify elements by UI type; describe what is visually there.",
+          images: [imageBase64],
+        },
+        onChunk,
+      );
+    } catch (err) {
+      throw wrapOllamaError(err, "Failed to analyze image");
+    }
+  }
+
+  /**
+   * Stage 2 of alt text: distill the visual analysis into one vivid,
+   * screen-reader-ready sentence. Text-only call — the grounding already
+   * happened in stage 1 — so it's fast.
+   */
+  async generateAltTextFromAnalysis(
+    analysis: string,
+    onChunk?: (chunk: string) => void,
+  ): Promise<string> {
+    try {
+      const raw = await this.streamGenerate(
+        {
+          prompt: [
+            "Using ONLY the visual analysis below, write one alt-text sentence for screen-reader users.",
+            "Rules:",
+            "- Lead with the most distinctive visual subject, not its role or category.",
+            "- Vivid, concrete language; keep the key color, action or visible text when it matters.",
+            "- NEVER use generic words like: image, picture, photo, graphic, icon, button, container, element, screenshot, UI, component.",
+            "- Under 125 characters. No quotes. No preamble like 'Alt text:' or 'The image shows'. Output the sentence only.",
+            "",
+            "Visual analysis:",
+            analysis,
+          ].join("\n"),
+        },
+        onChunk,
+      );
+      return cleanAltText(raw);
+    } catch (err) {
+      throw wrapOllamaError(err, "Failed to generate alt text");
+    }
+  }
+
+  /**
+   * Single-shot alt text (legacy path; the UI now prefers the two-stage
+   * analyzeImage + generateAltTextFromAnalysis flow).
    */
   async generateAltText(
     imageBase64: string,
     onChunk?: (chunk: string) => void,
   ): Promise<string> {
     try {
-      const res = await fetch(`${this.endpoint}/api/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: this.model,
+      const raw = await this.streamGenerate(
+        {
           prompt:
-            "Generate a concise, descriptive alt text (max 125 chars) for this image. Be specific about what's shown, not generic.",
+            "Write one vivid alt-text sentence (max 125 chars) describing what is visually in this image. " +
+            "Lead with the subject. Never use generic words like image, button, container, icon. " +
+            "No preamble — output the sentence only.",
           images: [imageBase64],
-          stream: true,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Ollama error: ${res.statusText}`);
-      }
-
-      let fullText = "";
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
-
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const obj = JSON.parse(line);
-            if (obj.response) {
-              fullText += obj.response;
-              onChunk?.(obj.response);
-            }
-          } catch {
-            // Ignore parse errors in streaming
-          }
-        }
-      }
-
-      return fullText.trim();
+        },
+        onChunk,
+      );
+      return cleanAltText(raw);
     } catch (err) {
-      const raw = err instanceof Error ? err.message : String(err);
-      // "Failed to fetch" from the plugin iframe is almost always CORS:
-      // the iframe origin is "null", which Ollama rejects by default.
-      const hint = /failed to fetch/i.test(raw)
-        ? ` — start Ollama with OLLAMA_ORIGINS="*" ollama serve`
-        : "";
-      throw new Error(`Failed to generate alt text: ${raw}${hint}`);
+      throw wrapOllamaError(err, "Failed to generate alt text");
     }
   }
+}
+
+/**
+ * Models love preambles ("The image shows…", "Alt text: …") and generic
+ * openers; strip them, normalize whitespace/quotes, and keep it under 125
+ * chars cutting at a word boundary.
+ */
+export function cleanAltText(raw: string): string {
+  let text = raw.trim();
+  text = text.replace(/^(here( is|'s)[^:]*:|alt[- ]?text:?|description:?)\s*/i, "");
+  text = text.replace(/^["'“”]+|["'“”]+$/g, "");
+  text = text.replace(
+    /^(the |an? )?(image|picture|photo(graph)?|graphic|illustration|screenshot)\s+(shows?|depicts?|features?|displays?|contains?|of)\s*/i,
+    "",
+  );
+  text = text.replace(/\s+/g, " ").trim();
+  if (text) text = text[0]!.toUpperCase() + text.slice(1);
+  if (text.length > 125) {
+    const cut = text.slice(0, 125);
+    const lastSpace = cut.lastIndexOf(" ");
+    text = (lastSpace > 60 ? cut.slice(0, lastSpace) : cut).replace(/[,;:\s]+$/, "");
+  }
+  return text;
+}
+
+function wrapOllamaError(err: unknown, prefix: string): Error {
+  const raw = err instanceof Error ? err.message : String(err);
+  // "Failed to fetch" from the plugin iframe is almost always CORS:
+  // the iframe origin is "null", which Ollama rejects by default.
+  const hint = /failed to fetch/i.test(raw)
+    ? ` — start Ollama with OLLAMA_ORIGINS="*" ollama serve`
+    : "";
+  return new Error(`${prefix}: ${raw}${hint}`);
 }
 
 export const ollamaClient = new OllamaClient();
