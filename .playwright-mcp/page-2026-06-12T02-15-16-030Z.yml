@@ -1,0 +1,182 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - text: Figma plugin · WCAG 2.2 AA · Local-first AI
+      - heading "Catch accessibility issues before they ship." [level=1] [ref=e4]:
+        - text: Catch accessibility issues
+        - text: before they ship.
+      - paragraph [ref=e5]: Figma A11y Audit scans your design file against WCAG 2.2 AA — text contrast, tap targets, text size, focus states — and annotates tab order and alt text with a local vision model via Ollama. Nothing leaves your machine.
+      - generic [ref=e6]:
+        - link "View on GitHub" [ref=e7] [cursor=pointer]:
+          - /url: https://github.com/juliocoraspe/figma-a11y-audit
+        - link "Try the live demo ↓" [ref=e8] [cursor=pointer]:
+          - /url: "#demo"
+  - main [ref=e9]:
+    - region "Six Tier-1 checks" [ref=e10]:
+      - generic [ref=e11]:
+        - heading "Six Tier-1 checks" [level=2] [ref=e12]
+        - list [ref=e13]:
+          - listitem [ref=e14]:
+            - text: 01 · WCAG 1.4.3
+            - strong [ref=e15]: Text contrast
+            - text: Per-segment ratios, alpha blending, large-text thresholds, gradient/image warnings.
+          - listitem [ref=e16]:
+            - text: 02 · WCAG 1.4.11
+            - strong [ref=e17]: Non-text contrast
+            - text: Borders, icons and UI elements against their effective background.
+          - listitem [ref=e18]:
+            - text: 03 · WCAG 2.5.8
+            - strong [ref=e19]: Tap target size
+            - text: 24px AA minimum with spacing analysis against neighboring interactive targets.
+          - listitem [ref=e20]:
+            - text: 04 · WCAG 1.4.4
+            - strong [ref=e21]: Text size
+            - text: 12px recommended minimum, 10px hard floor, caption/legal exceptions.
+          - listitem [ref=e22]:
+            - text: 05 · WCAG 2.4.7
+            - strong [ref=e23]: Focus state defined
+            - text: Flags interactive component sets shipping Hover/Pressed/Disabled but no Focus.
+          - listitem [ref=e24]:
+            - text: 06 · WCAG 2.4.11
+            - strong [ref=e25]: Focus visibility
+            - text: Validates indicator thickness (≥2px) and contrast (≥3:1) against the surface.
+    - region "Live demo" [ref=e26]:
+      - generic [ref=e27]:
+        - heading "Live demo" [level=2] [ref=e28]
+        - paragraph [ref=e29]:
+          - text: This is the
+          - emphasis [ref=e30]: actual plugin UI
+          - text: ", running in your browser against a simulated Figma sandbox with sample scan results. Hit"
+          - strong [ref=e31]: Scan page
+          - text: ", browse issues, open details, apply the contrast auto-fix. (AI alt text needs a local Ollama, so it stays offline here.)"
+        - generic [ref=e33]:
+          - generic [ref=e34]: ⬢ Figma A11y Audit — demo
+          - iframe [active] [ref=e35]:
+            - generic [ref=f1e3]:
+              - generic [ref=f1e4]:
+                - generic [ref=f1e5]:
+                  - heading "Settings" [level=2] [ref=f1e6]
+                  - button "✕" [ref=f1e7] [cursor=pointer]
+                - generic [ref=f1e8]:
+                  - generic [ref=f1e9]:
+                    - heading "Ollama Configuration" [level=3] [ref=f1e10]
+                    - generic [ref=f1e11]:
+                      - generic [ref=f1e12]: "Endpoint:"
+                      - generic [ref=f1e13]:
+                        - code [ref=f1e14]: http://localhost:11434
+                        - button "Edit" [ref=f1e15] [cursor=pointer]
+                    - generic [ref=f1e16]:
+                      - generic [ref=f1e17]: "Status:"
+                      - generic [ref=f1e18]:
+                        - generic [ref=f1e19]: 🟢
+                        - generic [ref=f1e20]: Connected
+                    - generic [ref=f1e21]:
+                      - generic [ref=f1e22]: "Model:"
+                      - code [ref=f1e24]: llama3.2-vision (~7.3GB)
+                    - button "Test Connection" [ref=f1e25] [cursor=pointer]
+                  - generic [ref=f1e26]:
+                    - heading "About" [level=3] [ref=f1e27]
+                    - generic [ref=f1e28]:
+                      - paragraph [ref=f1e29]:
+                        - strong [ref=f1e30]: A11y Audit
+                        - text: v0.3
+                      - paragraph [ref=f1e31]: Accessibility scanning + AI-powered annotation
+                      - list [ref=f1e32]:
+                        - listitem [ref=f1e33]: 6 Tier 1 accessibility checks
+                        - listitem [ref=f1e34]: Tab order assignment
+                        - listitem [ref=f1e35]: Alt text generation with local AI
+                        - listitem [ref=f1e36]: Language declaration
+                      - paragraph [ref=f1e37]: Built with React, Figma Plugin API, and Ollama
+              - generic [ref=f1e52]:
+                - generic [ref=f1e53]:
+                  - button "Annotate" [ref=f1e54] [cursor=pointer]
+                  - generic [ref=f1e55]:
+                    - button "? Legend" [ref=f1e57] [cursor=pointer]
+                    - button "⚙️" [ref=f1e58] [cursor=pointer]
+                - generic [ref=f1e59]:
+                  - banner [ref=f1e60]:
+                    - generic [ref=f1e61]:
+                      - generic [ref=f1e62]: RESULTS
+                      - generic [ref=f1e63]: 240 nodes · 318ms
+                    - list [ref=f1e64]:
+                      - listitem [ref=f1e65]:
+                        - generic [ref=f1e66]: "1"
+                        - generic [ref=f1e67]: critical
+                      - listitem [ref=f1e68]:
+                        - generic [ref=f1e69]: "3"
+                        - generic [ref=f1e70]: serious
+                      - listitem [ref=f1e71]:
+                        - generic [ref=f1e72]: "1"
+                        - generic [ref=f1e73]: moderate
+                      - listitem [ref=f1e74]:
+                        - generic [ref=f1e75]: "1"
+                        - generic [ref=f1e76]: minor
+                  - generic [ref=f1e77]:
+                    - 'button "1 critical Text #9CA3AF on #FFFFFF has contrast 2.54:1 (needs 4.5:1 for normal text at 14px, AA) Login / Form / Hint text WCAG 1.4.3" [ref=f1e79] [cursor=pointer]':
+                      - generic [ref=f1e80]: "1"
+                      - generic "critical" [ref=f1e82]
+                      - generic [ref=f1e83]:
+                        - 'generic "Text #9CA3AF on #FFFFFF has contrast 2.54:1 (needs 4.5:1 for normal text at 14px, AA)" [ref=f1e84]'
+                        - generic "Login / Form / Hint text" [ref=f1e85]
+                      - generic [ref=f1e86]: WCAG 1.4.3
+                    - 'button "2 serious Text #8B9DC3 on #F5F1E8 has contrast 3.12:1 (needs 4.5:1 for normal text at 16px, AA) Login / Footer / Terms link WCAG 1.4.3" [ref=f1e88] [cursor=pointer]':
+                      - generic [ref=f1e89]: "2"
+                      - generic "serious" [ref=f1e91]
+                      - generic [ref=f1e92]:
+                        - 'generic "Text #8B9DC3 on #F5F1E8 has contrast 3.12:1 (needs 4.5:1 for normal text at 16px, AA)" [ref=f1e93]'
+                        - generic "Login / Footer / Terms link" [ref=f1e94]
+                      - generic [ref=f1e95]: WCAG 1.4.3
+                    - 'button "3 serious ''Icon button / Close'' is 20×20px, needs 24px minimum. Spacing to neighbors: 8px. Login / Modal / Icon button / Close WCAG 2.5.8" [ref=f1e97] [cursor=pointer]':
+                      - generic [ref=f1e98]: "3"
+                      - generic "serious" [ref=f1e100]
+                      - generic [ref=f1e101]:
+                        - 'generic "''Icon button / Close'' is 20×20px, needs 24px minimum. Spacing to neighbors: 8px." [ref=f1e102]'
+                        - generic "Login / Modal / Icon button / Close" [ref=f1e103]
+                      - generic [ref=f1e104]: WCAG 2.5.8
+                    - 'button "4 serious ''Button / Primary'' component has variants: Default, Hover, Pressed, Disabled. Missing focus state variant (WCAG 2.4.7 requires a visible focus indicator). Components / Button / Primary WCAG 2.4.7" [ref=f1e106] [cursor=pointer]':
+                      - generic [ref=f1e107]: "4"
+                      - generic "serious" [ref=f1e109]
+                      - generic [ref=f1e110]:
+                        - 'generic "''Button / Primary'' component has variants: Default, Hover, Pressed, Disabled. Missing focus state variant (WCAG 2.4.7 requires a visible focus indicator)." [ref=f1e111]'
+                        - generic "Components / Button / Primary" [ref=f1e112]
+                      - generic [ref=f1e113]: WCAG 2.4.7
+                    - button "5 moderate 'Input / Text field' focus variant is present but indicator is 1px thick (needs 2px) and indicator contrast is 1.82:1 (needs 3.0:1). Components / Input / Text field WCAG 2.4.11" [ref=f1e115] [cursor=pointer]:
+                      - generic [ref=f1e116]: "5"
+                      - generic "moderate" [ref=f1e118]
+                      - generic [ref=f1e119]:
+                        - generic "'Input / Text field' focus variant is present but indicator is 1px thick (needs 2px) and indicator contrast is 1.82:1 (needs 3.0:1)." [ref=f1e120]
+                        - generic "Components / Input / Text field" [ref=f1e121]
+                      - generic [ref=f1e122]: WCAG 2.4.11
+                    - button "6 minor Text size 11px is below 12px recommended minimum. Login / Form / Helper text WCAG 1.4.4" [ref=f1e124] [cursor=pointer]:
+                      - generic [ref=f1e125]: "6"
+                      - generic "minor" [ref=f1e127]
+                      - generic [ref=f1e128]:
+                        - generic "Text size 11px is below 12px recommended minimum." [ref=f1e129]
+                        - generic "Login / Form / Helper text" [ref=f1e130]
+                      - generic [ref=f1e131]: WCAG 1.4.4
+                  - contentinfo [ref=f1e132]:
+                    - button "Re-run audit" [ref=f1e133] [cursor=pointer]
+    - region "Run it locally" [ref=e36]:
+      - generic [ref=e37]:
+        - heading "Run it locally" [level=2] [ref=e38]
+        - list [ref=e39]:
+          - listitem [ref=e40]: "Clone and build:"
+        - code [ref=e42]: git clone https://github.com/juliocoraspe/figma-a11y-audit.git cd figma-a11y-audit npm install npm run build
+        - list [ref=e43]:
+          - listitem [ref=e44]:
+            - text: "In Figma desktop:"
+            - strong [ref=e45]: Plugins → Development → Import plugin from manifest…
+            - text: and pick
+            - code [ref=e46]: dist/manifest.json
+            - text: .
+          - listitem [ref=e47]:
+            - text: For AI alt text, run Ollama with permissive CORS (the plugin iframe has a
+            - code [ref=e48]: "null"
+            - text: "origin):"
+        - code [ref=e50]: OLLAMA_ORIGINS="*" ollama serve ollama pull llama3.2-vision
+  - contentinfo [ref=e51]:
+    - generic [ref=e52]:
+      - text: Built by
+      - link "Julio Coraspe" [ref=e53] [cursor=pointer]:
+        - /url: https://github.com/juliocoraspe
+      - text: · MIT License · React + Figma Plugin API + Ollama. Everything runs on your machine.

@@ -63,7 +63,7 @@ export async function handleUIMessage(
       handleTabOrderRequest(msg.frameId);
       return;
     case "export-images-request":
-      await handleExportImagesRequest();
+      await handleExportImagesRequest(msg.scope);
       return;
     case "tab-order-overlay":
       await paintTabOrderOverlay(msg.items);
@@ -338,41 +338,91 @@ function handleAnnotateTabOrder(
 
 /**
  * Export image-bearing nodes as PNG bytes so the UI can preview them and
- * feed them to the local vision model. Selection first; falls back to the
- * current page. Capped to avoid huge transfers on image-heavy pages.
+ * feed them to the local vision model. The scope is explicit (the UI shows
+ * it), and each image carries its previously saved alt assignment from
+ * plugin data. Capped to avoid huge transfers on image-heavy pages.
  */
 const MAX_EXPORT_IMAGES = 20;
 const EXPORT_MAX_DIMENSION = 1024;
 
-async function handleExportImagesRequest(): Promise<void> {
-  const root = resolveAnnotateRoot();
-  if (!root) {
+/** Plugin-data key where the alt assignment persists inside the .fig file. */
+const ALT_DATA_KEY = "a11y-alt";
+
+interface AltAssignment {
+  text: string;
+  decorative: boolean;
+}
+
+function readAltAssignment(node: SceneNode): AltAssignment | null {
+  try {
+    const raw = node.getPluginData(ALT_DATA_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AltAssignment;
+    return {
+      text: typeof parsed.text === "string" ? parsed.text : "",
+      decorative: parsed.decorative === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function handleExportImagesRequest(
+  scope: "selection" | "page",
+): Promise<void> {
+  const roots: BaseNode[] =
+    scope === "selection"
+      ? [...figma.currentPage.selection]
+      : [figma.currentPage];
+
+  if (scope === "selection" && roots.length === 0) {
     postUI({
       type: "error",
-      code: "FRAME_NOT_FOUND",
-      message: "Nothing to export: no selection and no current page.",
+      code: "IMAGES_NO_SELECTION",
+      message:
+        "Nothing is selected. Select frames or images on the canvas, or scan the entire page instead.",
     });
     return;
   }
 
   const candidates: SceneNode[] = [];
-  walkForImages(root, candidates);
+  const seen = new Set<string>();
+  for (const root of roots) {
+    walkForImages(root, candidates);
+  }
 
-  const images: Array<{ nodeId: string; path: string[]; bytes: Uint8Array }> = [];
-  for (const node of candidates.slice(0, MAX_EXPORT_IMAGES)) {
+  const images: Array<{
+    nodeId: string;
+    path: string[];
+    bytes: Uint8Array;
+    altText: string | null;
+    decorative: boolean;
+  }> = [];
+
+  for (const node of candidates) {
+    if (seen.has(node.id)) continue;
+    seen.add(node.id);
+    if (images.length >= MAX_EXPORT_IMAGES) break;
     try {
       const scale = exportScaleFor(node);
       const bytes = await node.exportAsync({
         format: "PNG",
         constraint: { type: "SCALE", value: scale },
       });
-      images.push({ nodeId: node.id, path: nodePathOf(node), bytes });
+      const saved = readAltAssignment(node);
+      images.push({
+        nodeId: node.id,
+        path: nodePathOf(node),
+        bytes,
+        altText: saved && saved.text ? saved.text : null,
+        decorative: saved?.decorative ?? false,
+      });
     } catch (err) {
       console.warn(`[a11y] export failed for ${node.id}`, err);
     }
   }
 
-  postUI({ type: "images-detected", images });
+  postUI({ type: "images-detected", scope, images });
 }
 
 function walkForImages(node: BaseNode, out: SceneNode[]): void {
@@ -423,18 +473,25 @@ async function handleAnnotateAltText(
   text: string,
   decorative: boolean,
 ): Promise<void> {
-  // v0.3: store alt text in node via figma.variables or metadata (v1.1+ uses clientStorage)
   const node = figma.getNodeById(nodeId);
-  if (!node) {
-    // Uploaded files (nodeId "upload-...") have no canvas node; nothing to badge.
-    postUI({ type: "image-alt-text-saved", nodeId });
+  if (!node || node.type === "DOCUMENT" || node.type === "PAGE") {
+    postUI({
+      type: "error",
+      code: "NODE_NOT_FOUND",
+      message: `Image node ${nodeId} not found.`,
+    });
     return;
   }
 
-  // Temporary storage: log to console; v1.1+ will persist via clientStorage
-  console.log(
-    `[a11y] Alt text for ${nodeId}: ${decorative ? "[decorative]" : text}`,
-  );
+  // Persist on the node itself: plugin data is saved inside the .fig file,
+  // so the assignment survives reopening the file and is re-read on the
+  // next image scan.
+  const sn = node as SceneNode;
+  if (text || decorative) {
+    sn.setPluginData(ALT_DATA_KEY, JSON.stringify({ text, decorative }));
+  } else {
+    sn.setPluginData(ALT_DATA_KEY, "");
+  }
 
   await paintAltBadge(
     nodeId,

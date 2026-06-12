@@ -46,8 +46,20 @@ export type SandboxToUI =
   | { type: "tab-order-saved"; frameId: string; count: number }
   | {
       type: "images-detected";
-      /** PNG bytes exported via exportAsync; structured-clone-safe. */
-      images: Array<{ nodeId: string; path: string[]; bytes: Uint8Array }>;
+      /** Which scope was actually scanned, so the UI can say so. */
+      scope: "selection" | "page";
+      /**
+       * PNG bytes exported via exportAsync; structured-clone-safe.
+       * altText/decorative reflect a previously saved assignment (plugin
+       * data on the node), so the UI can show what's already annotated.
+       */
+      images: Array<{
+        nodeId: string;
+        path: string[];
+        bytes: Uint8Array;
+        altText: string | null;
+        decorative: boolean;
+      }>;
     }
   | { type: "image-alt-text-saved"; nodeId: string };
 
@@ -78,8 +90,8 @@ export type UIToSandbox =
   | { type: "dismiss-issue"; issueId: string }
   /** frameId omitted: sandbox falls back to the selected frame or the page. */
   | { type: "tab-order-request"; frameId?: string }
-  /** Export image-bearing nodes (selection first, else current page) as PNG. */
-  | { type: "export-images-request" }
+  /** Export image-bearing nodes in the given scope as PNG. */
+  | { type: "export-images-request"; scope: "selection" | "page" }
   /** Repaint the tab-order canvas overlay. Empty items array clears it. */
   | {
       type: "tab-order-overlay";

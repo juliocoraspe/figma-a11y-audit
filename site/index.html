@@ -290,6 +290,37 @@ ollama pull llama3.2-vision</code></pre>
     frame.contentWindow.postMessage({ pluginMessage: msg }, "*");
   }
 
+  // Sample "exported" images for the Alt Text demo, drawn on the fly.
+  // (AI generation still needs a local Ollama; manual text + Approve works.)
+  function drawDemoPng(label, bg) {
+    var c = document.createElement("canvas");
+    c.width = 320; c.height = 200;
+    var g = c.getContext("2d");
+    g.fillStyle = bg; g.fillRect(0, 0, 320, 200);
+    g.fillStyle = "#F5F1E8";
+    g.font = "bold 26px sans-serif";
+    g.fillText(label, 22, 108);
+    return new Promise(function (resolve) {
+      c.toBlob(function (blob) {
+        blob.arrayBuffer().then(function (buf) {
+          resolve(new Uint8Array(buf));
+        });
+      }, "image/png");
+    });
+  }
+
+  function makeDemoImages() {
+    return Promise.all([
+      drawDemoPng("Hero photo", "#1E3A5F"),
+      drawDemoPng("Divider art", "#7C3AED")
+    ]).then(function (bytes) {
+      return [
+        { nodeId: "img-1", path: ["Home", "Hero photo"], bytes: bytes[0], altText: null, decorative: false },
+        { nodeId: "img-2", path: ["Home", "Divider art"], bytes: bytes[1], altText: null, decorative: false }
+      ];
+    });
+  }
+
   window.addEventListener("message", function (e) {
     if (e.source !== frame.contentWindow) return;
     var msg = e.data && e.data.pluginMessage;
@@ -336,7 +367,9 @@ ollama pull llama3.2-vision</code></pre>
         break;
 
       case "export-images-request":
-        reply({ type: "images-detected", images: [] });
+        makeDemoImages().then(function (images) {
+          reply({ type: "images-detected", scope: msg.scope || "page", images });
+        });
         break;
 
       case "annotate-alt-text":
