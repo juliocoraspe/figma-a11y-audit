@@ -89,6 +89,8 @@ export function OverlayLegend() {
             right: 0,
             top: "calc(100% + 6px)",
             width: 272,
+            maxHeight: 420,
+            overflowY: "auto",
             zIndex: 1000,
             background: "#fff",
             border: "1px solid #1e3a5f",
@@ -171,6 +173,54 @@ export function OverlayLegend() {
             <code style={{ fontSize: 10 }}>[a11y-…]</code> on the canvas. The
             scanner ignores them, and you can delete those frames at any time —
             re-running a scan or re-saving annotations repaints them.
+          </span>
+
+          <div style={{ height: 1, background: "#ddd" }} role="separator" />
+
+          <span
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.08em",
+              fontFamily: "var(--font-mono, monospace)",
+              color: "#1e3a5f",
+            }}
+          >
+            LOCAL AI (OLLAMA)
+          </span>
+
+          <span style={{ fontSize: 12, lineHeight: 1.45 }}>
+            AI alt text runs on <strong>Ollama</strong>, a free AI server on
+            your own machine — images never leave your computer and there are
+            no API costs. The plugin talks to it at{" "}
+            <code style={{ fontSize: 10 }}>http://localhost:11434</code> using
+            the <code style={{ fontSize: 10 }}>llama3.2-vision</code> model
+            (~8 GB download, needs ~8 GB of free RAM).
+          </span>
+
+          <span style={{ fontSize: 11, color: "#444", lineHeight: 1.55 }}>
+            <strong>One-time setup:</strong>
+            <br />
+            1. Install Ollama (<code style={{ fontSize: 10 }}>brew install ollama</code>{" "}
+            or the desktop app).
+            <br />
+            2. Allow plugin access — Figma plugins run from a{" "}
+            <code style={{ fontSize: 10 }}>null</code> origin that Ollama
+            rejects by default. Terminal:{" "}
+            <code style={{ fontSize: 10 }}>OLLAMA_ORIGINS="*" ollama serve</code>.
+            macOS menu-bar app:{" "}
+            <code style={{ fontSize: 10 }}>
+              launchctl setenv OLLAMA_ORIGINS '*'
+            </code>{" "}
+            then restart the app.
+            <br />
+            3. <code style={{ fontSize: 10 }}>ollama pull llama3.2-vision</code>
+          </span>
+
+          <span style={{ fontSize: 11, color: "#666", lineHeight: 1.45 }}>
+            Check the connection in Settings (⚙) — green means ready. The
+            first generation loads the model into RAM (~30 s); after that it
+            takes seconds. Everything else in the plugin (scanning, tab order,
+            language) works without Ollama.
           </span>
         </div>
       )}
