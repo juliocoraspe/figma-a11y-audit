@@ -10,7 +10,11 @@
 import type { Issue } from "@shared/types/Issue";
 import type { SandboxToUI, UIToSandbox } from "@shared/types/Message";
 import { assertNever } from "@shared/types/Message";
-import { A11Y_FRAME_PREFIX } from "@shared/constants";
+import {
+  A11Y_FRAME_PREFIX,
+  FOCUS_RING_HEX,
+  FOCUS_RING_SPREAD,
+} from "@shared/constants";
 import { runScan } from "@sandbox/detect/runner";
 import {
   clearOverlays,
@@ -147,11 +151,11 @@ function handleDismissIssue(issueId: string, state: SandboxState): void {
 }
 
 /**
- * Phase 2: only check 01 (text contrast) supports auto-fix. The UI computes
- * the suggested color and ships it as `params.targetHex`. We re-color the
- * first solid fill of the text node, mark the issue as resolved, and emit
- * fix-applied with before/after for the UI to show a confirmation toast or
- * an updated detail view.
+ * Auto-fix dispatch.
+ *   01 — recolor the text with the UI-computed `params.targetHex`.
+ *   05 — clone the Default variant into a new Focus variant with a visible
+ *        focus ring, placed inside the component set on canvas.
+ *   06 — strengthen a weak focus indicator (ring spread + thin strokes).
  */
 async function handleApplyFix(
   issueId: string,
@@ -169,15 +173,34 @@ async function handleApplyFix(
     return;
   }
 
-  if (checkId !== "01-text-contrast") {
-    postUI({
-      type: "error",
-      code: "FIX_NOT_SUPPORTED",
-      message: `Auto-fix is not supported for check ${checkId} yet.`,
-    });
-    return;
+  try {
+    switch (checkId) {
+      case "01-text-contrast":
+        await fixTextContrast(issue, params);
+        return;
+      case "05-focus-defined":
+        await fixCreateFocusVariant(issue);
+        return;
+      case "06-focus-visibility":
+        await fixStrengthenFocusIndicator(issue);
+        return;
+      default:
+        postUI({
+          type: "error",
+          code: "FIX_NOT_SUPPORTED",
+          message: `Auto-fix is not supported for check ${checkId} yet.`,
+        });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    postUI({ type: "error", code: "FIX_FAILED", message });
   }
+}
 
+async function fixTextContrast(
+  issue: Issue,
+  params: Record<string, unknown>,
+): Promise<void> {
   const targetHex = typeof params.targetHex === "string" ? params.targetHex : null;
   if (!targetHex) {
     postUI({
@@ -202,25 +225,214 @@ async function handleApplyFix(
   const before = { textColor: issue.details["textColor"] ?? null };
 
   // We can't change a text fill without loading its font(s) first.
-  try {
-    await loadFontsForText(text);
-    const newFill: SolidPaint = {
-      type: "SOLID",
-      color: hexToRgbCanvas(targetHex),
-    };
-    text.fills = [newFill];
-    issue.status = "resolved";
+  await loadFontsForText(text);
+  const newFill: SolidPaint = {
+    type: "SOLID",
+    color: hexToRgbCanvas(targetHex),
+  };
+  text.fills = [newFill];
+  issue.status = "resolved";
 
+  postUI({
+    type: "fix-applied",
+    issueId: issue.id,
+    before,
+    after: { textColor: targetHex },
+  });
+}
+
+// ---------- focus state fixes (checks 05 / 06) ----------
+
+const FOCUS_VARIANT_PATTERN = /focus(?:ed|-visible)?/i;
+const DEFAULT_VARIANT_PATTERN = /default|rest|enabled|normal/i;
+
+/**
+ * Check 05 fix: create the missing Focus variant. Clones the Default-like
+ * variant, names it `<StateProp>=Focus` (preserving the other variant
+ * properties), styles it with a visible focus ring, places it at the right
+ * edge of the component set, and zooms the viewport to it so the suggested
+ * frame is right there on canvas for review.
+ */
+async function fixCreateFocusVariant(issue: Issue): Promise<void> {
+  const set = figma.getNodeById(issue.nodeId);
+  if (!set || set.type !== "COMPONENT_SET") {
+    postUI({
+      type: "error",
+      code: "FIX_TARGET_INVALID",
+      message: "Target node is not a component set.",
+    });
+    return;
+  }
+
+  const variants = set.children.filter(
+    (c): c is ComponentNode => c.type === "COMPONENT",
+  );
+  if (variants.length === 0) {
+    postUI({
+      type: "error",
+      code: "FIX_TARGET_INVALID",
+      message: "Component set has no variants to clone.",
+    });
+    return;
+  }
+  if (variants.some((v) => FOCUS_VARIANT_PATTERN.test(v.name))) {
+    // Someone added it since the scan; just mark the issue resolved.
+    issue.status = "resolved";
     postUI({
       type: "fix-applied",
-      issueId,
-      before,
-      after: { textColor: targetHex },
+      issueId: issue.id,
+      before: {},
+      after: { note: "Focus variant already exists." },
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    postUI({ type: "error", code: "FIX_FAILED", message });
+    return;
   }
+
+  const baseline =
+    variants.find((v) => DEFAULT_VARIANT_PATTERN.test(v.name)) ?? variants[0]!;
+
+  const stateProp =
+    typeof issue.details["suggestedProperty"] === "string" &&
+    issue.details["suggestedProperty"]
+      ? (issue.details["suggestedProperty"] as string)
+      : "State";
+
+  const clone = baseline.clone();
+  clone.name = focusVariantName(baseline.name, stateProp);
+  set.appendChild(clone);
+
+  // Place it after the right-most variant, aligned with the baseline.
+  const maxRight = Math.max(...variants.map((v) => v.x + v.width));
+  clone.x = maxRight + 24;
+  clone.y = baseline.y;
+
+  // Grow the set frame if the new variant falls outside it.
+  const needW = clone.x + clone.width + 16;
+  const needH = clone.y + clone.height + 16;
+  if (set.width < needW || set.height < needH) {
+    set.resizeWithoutConstraints(
+      Math.max(set.width, needW),
+      Math.max(set.height, needH),
+    );
+  }
+
+  applyFocusRing(clone);
+  issue.status = "resolved";
+
+  figma.currentPage.selection = [clone];
+  figma.viewport.scrollAndZoomIntoView([clone]);
+
+  postUI({
+    type: "fix-applied",
+    issueId: issue.id,
+    before: { variants: issue.details["existingVariants"] ?? null },
+    after: {
+      createdVariant: clone.name,
+      indicator: `${FOCUS_RING_SPREAD}px ring ${FOCUS_RING_HEX}`,
+    },
+  });
+}
+
+/**
+ * Check 06 fix: the Focus variant exists but its indicator is too thin or
+ * too low-contrast. Apply the standard focus ring (and bump any sub-2px
+ * stroke), then zoom to the variant for review.
+ */
+async function fixStrengthenFocusIndicator(issue: Issue): Promise<void> {
+  const set = figma.getNodeById(issue.nodeId);
+  if (!set || set.type !== "COMPONENT_SET") {
+    postUI({
+      type: "error",
+      code: "FIX_TARGET_INVALID",
+      message: "Target node is not a component set.",
+    });
+    return;
+  }
+
+  const focusVariant = set.children.find(
+    (c): c is ComponentNode =>
+      c.type === "COMPONENT" && FOCUS_VARIANT_PATTERN.test(c.name),
+  );
+  if (!focusVariant) {
+    postUI({
+      type: "error",
+      code: "FIX_TARGET_INVALID",
+      message: "No focus variant found in the component set.",
+    });
+    return;
+  }
+
+  applyFocusRing(focusVariant);
+  if (
+    typeof focusVariant.strokeWeight === "number" &&
+    focusVariant.strokeWeight > 0 &&
+    focusVariant.strokeWeight < 2
+  ) {
+    focusVariant.strokeWeight = 2;
+  }
+
+  issue.status = "resolved";
+  figma.currentPage.selection = [focusVariant];
+  figma.viewport.scrollAndZoomIntoView([focusVariant]);
+
+  postUI({
+    type: "fix-applied",
+    issueId: issue.id,
+    before: {
+      thickness: issue.details["thickness"] ?? null,
+      indicatorContrast: issue.details["indicatorContrast"] ?? null,
+    },
+    after: {
+      indicator: `${FOCUS_RING_SPREAD}px ring ${FOCUS_RING_HEX}`,
+    },
+  });
+}
+
+/**
+ * Visible focus ring as a 0-blur drop shadow with spread: reads as a ring,
+ * never fights the variant's own strokes, and is exactly what check 06's
+ * shadow-indicator detection looks for. Prepended so it wins over any
+ * existing weak shadows.
+ */
+function applyFocusRing(node: ComponentNode): void {
+  const c = hexToRgbCanvas(FOCUS_RING_HEX);
+  const ring: DropShadowEffect = {
+    type: "DROP_SHADOW",
+    color: { r: c.r, g: c.g, b: c.b, a: 1 },
+    offset: { x: 0, y: 0 },
+    radius: 0,
+    spread: FOCUS_RING_SPREAD,
+    visible: true,
+    blendMode: "NORMAL",
+  };
+  node.effects = [ring, ...node.effects];
+}
+
+/**
+ * Build the focus variant name from the baseline's: keep every other
+ * property, set/replace the state property with "Focus".
+ * "State=Default, Size=Md" -> "State=Focus, Size=Md".
+ */
+function focusVariantName(baselineName: string, stateProp: string): string {
+  const parts = baselineName
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const out: string[] = [];
+  let replaced = false;
+  for (const part of parts) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    const key = part.slice(0, eq).trim();
+    if (key.toLowerCase() === stateProp.toLowerCase()) {
+      out.push(`${key}=Focus`);
+      replaced = true;
+    } else {
+      out.push(part);
+    }
+  }
+  if (!replaced) out.unshift(`${stateProp}=Focus`);
+  return out.join(", ");
 }
 
 async function loadFontsForText(text: TextNode): Promise<void> {

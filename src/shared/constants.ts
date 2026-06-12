@@ -42,6 +42,14 @@ export const TAB_BADGE_SIZE = 20;
 export const ALT_BADGE_HEX = "#16A34A";
 export const ALT_DECO_HEX = "#6B7280";
 
+/**
+ * Focus ring applied by the auto-fixes for checks 05/06: 0-blur drop shadow
+ * with spread, so it never fights the variant's own strokes. #2563EB has
+ * 5.1:1 contrast against white — comfortably above the 3:1 the check needs.
+ */
+export const FOCUS_RING_HEX = "#2563EB";
+export const FOCUS_RING_SPREAD = 3;
+
 /** Severity hex codes. Sandbox normalizes to {r,g,b} 0..1; UI uses as-is. */
 export const SEVERITY_HEX: Record<Severity, string> = {
   critical: "#DC2626",

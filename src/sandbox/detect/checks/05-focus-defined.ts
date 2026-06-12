@@ -49,8 +49,8 @@ export function checkFocusDefined(node: NodeShape, _ctx: ScanContext): Issue[] {
         suggestedProperty: pickFocusProperty(variants),
       },
       fix: {
-        type: "manual",
-        suggestion: `Add a variant where the existing state property is set to a "Focus" value. Style it with a visible focus ring (a 2-3px outline in your accent color).`,
+        type: "auto",
+        suggestion: `Add a variant where the existing state property is set to "Focus", styled with a visible focus ring: ≥2px thick, ≥3:1 contrast against the surface (e.g. a 3px #2563EB ring). "Create focus variant" does this for you — it clones the Default variant into the set, ready to restyle.`,
       },
       status: "open",
     },

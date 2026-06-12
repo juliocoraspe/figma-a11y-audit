@@ -29,6 +29,7 @@ export function DetailDrawer({
   const wcag = wcagFor(issue.checkId);
   const [showWhy, setShowWhy] = useState(false);
   const fixSuggestion = useMemo(() => computeFixSuggestion(issue), [issue]);
+  const actionFixLabel = actionFixLabelFor(issue.checkId);
   const isResolved = issue.status === "resolved";
   const isDismissed = issue.status === "dismissed";
 
@@ -208,6 +209,15 @@ export function DetailDrawer({
             }
           >
             Apply fix
+          </button>
+        ) : null}
+        {actionFixLabel && !isResolved ? (
+          <button
+            className="primary"
+            style={{ flex: 1 }}
+            onClick={() => onApplyFix(issue.id, issue.checkId, {})}
+          >
+            {actionFixLabel}
           </button>
         ) : null}
         {!isDismissed ? (
@@ -578,6 +588,22 @@ function formatDetails(
       }
   }
   return out;
+}
+
+/**
+ * Checks whose fix is an action on canvas rather than a computed value.
+ * 05 clones the Default variant into a styled Focus variant inside the
+ * component set; 06 strengthens the existing-but-weak focus indicator.
+ */
+function actionFixLabelFor(checkId: CheckId): string | null {
+  switch (checkId) {
+    case "05-focus-defined":
+      return "Create focus variant";
+    case "06-focus-visibility":
+      return "Strengthen indicator";
+    default:
+      return null;
+  }
 }
 
 function computeFixSuggestion(issue: Issue): {

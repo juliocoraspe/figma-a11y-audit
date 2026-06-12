@@ -96,8 +96,8 @@ export function checkFocusVisibility(
         backgroundColor: indicator.bgHex,
       },
       fix: {
-        type: "manual",
-        suggestion: `Make the focus indicator at least ${MIN_THICKNESS}px thick with ${MIN_RATIO.toFixed(1)}:1 contrast against the surrounding surface.`,
+        type: "auto",
+        suggestion: `Make the focus indicator at least ${MIN_THICKNESS}px thick with ${MIN_RATIO.toFixed(1)}:1 contrast against the surrounding surface (e.g. a 3px #2563EB ring). "Strengthen indicator" applies that ring to the Focus variant for you.`,
       },
       status: "open",
     },
