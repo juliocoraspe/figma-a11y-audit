@@ -30,7 +30,19 @@ figma.on("selectionchange", () => {
   if (!single) return;
 
   const resolved = resolveDotSelection(single);
-  if (!resolved) return;
+  if (!resolved) {
+    // A real design node (overlays are locked, so canvas clicks fall
+    // through to the element beneath). Tab Order mode listens to this for
+    // canvas picking; other views ignore it.
+    if (!single.name.startsWith("[a11y-")) {
+      figma.ui.postMessage({
+        type: "canvas-node-selected",
+        nodeId: single.id,
+        name: single.name,
+      });
+    }
+    return;
+  }
 
   // Prefer the issue id encoded in the dot name; if multiple issues share
   // a node we still surface the specific one the user clicked.

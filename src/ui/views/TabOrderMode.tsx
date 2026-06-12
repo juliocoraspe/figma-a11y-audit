@@ -2,13 +2,19 @@
  * Tab Order Mode — assign keyboard navigation order to interactive elements.
  *
  * The sandbox detects interactive elements (prototype reactions first,
- * naming heuristics second) inside the selected frame — or the whole page
- * when nothing is selected — and returns them in visual order (top-left →
- * bottom-right). The user assigns numbers by clicking rows, or accepts the
- * visual order via "Auto-assign".
+ * naming heuristics second) inside the selected frame — or the whole page —
+ * and returns them in visual order, together with any previously saved
+ * assignment (page plugin data), so editing resumes without re-analysis.
+ *
+ * Editing works both ways:
+ *   - From the list: click to assign/unassign, ↑ ↓ to reorder, ✕ to remove.
+ *   - From the canvas ("canvas picking"): with the mode open, clicking any
+ *     element on the canvas adds it as the next stop — including elements
+ *     detection missed — or highlights it if already assigned. Overlays are
+ *     locked, so clicks fall through to the real element beneath.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useUIBridge } from "../hooks/useUIBridge";
 
 interface Element {
@@ -23,6 +29,9 @@ export default function TabOrderMode() {
   const [orderMap, setOrderMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState("");
+  const [canvasPick, setCanvasPick] = useState(true);
+  const canvasPickRef = useRef(canvasPick);
+  canvasPickRef.current = canvasPick;
 
   // Subscribe to sandbox responses
   useEffect(() => {
@@ -31,12 +40,39 @@ export default function TabOrderMode() {
         case "tab-order-detected":
           setFrameId(msg.frameId);
           setElements(msg.nodes.map((n) => ({ nodeId: n.nodeId, name: n.name })));
-          setOrderMap({});
+          setOrderMap(msg.saved);
           setLoading(false);
+          if (Object.keys(msg.saved).length > 0) {
+            setStatusText(
+              `Loaded saved order (${Object.keys(msg.saved).length} stops) — edit and save again.`,
+            );
+          }
           return;
         case "tab-order-saved":
-          setStatusText(`✅ Saved order for ${msg.count} element(s).`);
+          setStatusText(
+            `✅ Saved ${msg.count} stop(s) — remembered in this file.`,
+          );
           return;
+        case "canvas-node-selected": {
+          if (!canvasPickRef.current) return;
+          const { nodeId, name } = msg;
+          setElements((prevEls) => {
+            const exists = prevEls.some((el) => el.nodeId === nodeId);
+            setOrderMap((prevOrder) => {
+              if (prevOrder[nodeId]) {
+                setStatusText(
+                  `'${name}' is already stop #${prevOrder[nodeId]} — use ↑ ↓ ✕ in the list to modify.`,
+                );
+                return prevOrder;
+              }
+              const next = Object.keys(prevOrder).length + 1;
+              setStatusText(`➕ Added '${name}' as stop #${next} (from canvas).`);
+              return { ...prevOrder, [nodeId]: next };
+            });
+            return exists ? prevEls : [...prevEls, { nodeId, name }];
+          });
+          return;
+        }
         case "error":
           setLoading(false);
           setStatusText(`❌ ${msg.message}`);
@@ -72,17 +108,27 @@ export default function TabOrderMode() {
   const handleToggleElement = (nodeId: string) => {
     setOrderMap((prev) => {
       if (prev[nodeId]) {
-        const removed = prev[nodeId];
-        const next: Record<string, number> = {};
-        for (const [id, n] of Object.entries(prev)) {
-          if (id === nodeId) continue;
-          next[id] = n > removed ? n - 1 : n;
-        }
-        return next;
+        return removeStop(prev, nodeId);
       }
       const nextNumber = Object.keys(prev).length + 1;
       return { ...prev, [nodeId]: nextNumber };
     });
+  };
+
+  /** Swap a stop with its neighbor (dir = -1 up, +1 down). */
+  const handleMoveStop = (nodeId: string, dir: -1 | 1) => {
+    setOrderMap((prev) => {
+      const current = prev[nodeId];
+      if (!current) return prev;
+      const target = current + dir;
+      const neighbor = Object.keys(prev).find((id) => prev[id] === target);
+      if (!neighbor) return prev;
+      return { ...prev, [nodeId]: target, [neighbor]: current };
+    });
+  };
+
+  const handleRemoveStop = (nodeId: string) => {
+    setOrderMap((prev) => removeStop(prev, nodeId));
   };
 
   // Auto-assign follows the visual order the sandbox already sorted by.
@@ -112,15 +158,25 @@ export default function TabOrderMode() {
     });
   };
 
+  const assignedCount = Object.keys(orderMap).length;
   const unassigned = elements.filter((el) => !orderMap[el.nodeId]).length;
+
+  // Assigned stops first (in order), then unassigned in detection order —
+  // so the list reads like the navigation path.
+  const sortedElements = [...elements].sort((a, b) => {
+    const oa = orderMap[a.nodeId] ?? Infinity;
+    const ob = orderMap[b.nodeId] ?? Infinity;
+    return oa - ob;
+  });
 
   return (
     <div className="tab-order-mode">
       <div className="tab-order-header">
         <h3>Assign tab order for keyboard navigation</h3>
         <p>
-          Click elements in the order they should receive focus, or use
-          Auto-assign (visual top-left → bottom-right order).
+          Click rows (or elements on the canvas) in the order they should
+          receive focus. The order is saved with the file — reopen anytime to
+          edit or add missed elements without re-running detection.
         </p>
       </div>
 
@@ -132,14 +188,31 @@ export default function TabOrderMode() {
         <>
           <div className="tab-order-stats">
             <p>
-              <strong>Interactive elements detected:</strong> {elements.length}
+              <strong>Interactive elements:</strong> {elements.length}
+              {assignedCount > 0 && (
+                <>
+                  {" "}
+                  · <strong>Assigned:</strong> {assignedCount}
+                </>
+              )}
             </p>
-            {Object.keys(orderMap).length > 0 && (
-              <p>
-                <strong>Assigned:</strong> {Object.keys(orderMap).length} /{" "}
-                {elements.length}
-              </p>
-            )}
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                cursor: "pointer",
+              }}
+              title="With this on, clicking any element on the canvas adds it as the next stop — even if detection missed it."
+            >
+              <input
+                type="checkbox"
+                checked={canvasPick}
+                onChange={(e) => setCanvasPick(e.target.checked)}
+              />
+              🎯 Canvas picking: click elements on canvas to add stops
+            </label>
             <button
               className="button button-secondary"
               onClick={requestDetection}
@@ -152,41 +225,72 @@ export default function TabOrderMode() {
             <div className="tab-order-empty">
               <p>
                 No interactive elements detected. Select a frame with buttons,
-                inputs or prototype connections and hit Re-detect.
+                inputs or prototype connections and hit Re-detect — or turn on
+                canvas picking and click elements directly.
               </p>
             </div>
           ) : (
             <div className="tab-order-list">
-              {elements.map((el) => (
-                <div
-                  key={el.nodeId}
-                  className="tab-order-item"
-                  onClick={() => handleToggleElement(el.nodeId)}
-                  style={{ cursor: "pointer" }}
-                  title="Click to assign/unassign order"
-                >
-                  <div className="tab-order-item-header">
-                    <span className="tab-order-item-name">{el.name}</span>
-                    <span style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                      {orderMap[el.nodeId] && (
-                        <div className="tab-order-item-badge">
-                          {orderMap[el.nodeId]}
-                        </div>
-                      )}
-                      <button
-                        className="button button-small button-secondary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleJumpTo(el.nodeId);
-                        }}
-                        title="Show on canvas"
+              {sortedElements.map((el) => {
+                const order = orderMap[el.nodeId];
+                return (
+                  <div
+                    key={el.nodeId}
+                    className="tab-order-item"
+                    onClick={() => handleToggleElement(el.nodeId)}
+                    style={{ cursor: "pointer" }}
+                    title={
+                      order
+                        ? "Click to unassign"
+                        : "Click to assign the next number"
+                    }
+                  >
+                    <div className="tab-order-item-header">
+                      <span className="tab-order-item-name">{el.name}</span>
+                      <span
+                        style={{ display: "flex", gap: "4px", alignItems: "center" }}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        ◎
-                      </button>
-                    </span>
+                        {order && (
+                          <>
+                            <div className="tab-order-item-badge">{order}</div>
+                            <button
+                              className="button button-small button-secondary"
+                              onClick={() => handleMoveStop(el.nodeId, -1)}
+                              disabled={order === 1}
+                              title="Move earlier in the order"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              className="button button-small button-secondary"
+                              onClick={() => handleMoveStop(el.nodeId, 1)}
+                              disabled={order === assignedCount}
+                              title="Move later in the order"
+                            >
+                              ↓
+                            </button>
+                            <button
+                              className="button button-small button-secondary"
+                              onClick={() => handleRemoveStop(el.nodeId)}
+                              title="Remove from the order"
+                            >
+                              ✕
+                            </button>
+                          </>
+                        )}
+                        <button
+                          className="button button-small button-secondary"
+                          onClick={() => handleJumpTo(el.nodeId)}
+                          title="Show on canvas"
+                        >
+                          ◎
+                        </button>
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -209,7 +313,7 @@ export default function TabOrderMode() {
               <button
                 className="button button-secondary"
                 onClick={handleClear}
-                disabled={Object.keys(orderMap).length === 0}
+                disabled={assignedCount === 0}
               >
                 Clear
               </button>
@@ -223,7 +327,7 @@ export default function TabOrderMode() {
               <button
                 className="button button-primary"
                 onClick={handleSaveOrder}
-                disabled={Object.keys(orderMap).length === 0}
+                disabled={assignedCount === 0 && elements.length === 0}
               >
                 Save order
               </button>
@@ -233,4 +337,19 @@ export default function TabOrderMode() {
       )}
     </div>
   );
+}
+
+/** Unassign a stop and compact the numbering so no gaps remain. */
+function removeStop(
+  prev: Record<string, number>,
+  nodeId: string,
+): Record<string, number> {
+  const removed = prev[nodeId];
+  if (!removed) return prev;
+  const next: Record<string, number> = {};
+  for (const [id, n] of Object.entries(prev)) {
+    if (id === nodeId) continue;
+    next[id] = n > removed ? n - 1 : n;
+  }
+  return next;
 }

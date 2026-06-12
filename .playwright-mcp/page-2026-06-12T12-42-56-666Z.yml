@@ -1,0 +1,188 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - text: Figma plugin · WCAG 2.2 AA · Local-first AI
+      - heading "Catch accessibility issues before they ship." [level=1] [ref=e4]:
+        - text: Catch accessibility issues
+        - text: before they ship.
+      - paragraph [ref=e5]: Figma A11y Audit scans your design file against WCAG 2.2 AA — text contrast, tap targets, text size, focus states — and annotates tab order and alt text with a local vision model via Ollama. Nothing leaves your machine.
+      - generic [ref=e6]:
+        - link "View on GitHub" [ref=e7] [cursor=pointer]:
+          - /url: https://github.com/juliocoraspe/figma-a11y-audit
+        - link "Try the live demo ↓" [ref=e8] [cursor=pointer]:
+          - /url: "#demo"
+  - main [ref=e9]:
+    - region "Six Tier-1 checks" [ref=e10]:
+      - generic [ref=e11]:
+        - heading "Six Tier-1 checks" [level=2] [ref=e12]
+        - list [ref=e13]:
+          - listitem [ref=e14]:
+            - text: 01 · WCAG 1.4.3
+            - strong [ref=e15]: Text contrast
+            - text: Per-segment ratios, alpha blending, large-text thresholds, gradient/image warnings.
+          - listitem [ref=e16]:
+            - text: 02 · WCAG 1.4.11
+            - strong [ref=e17]: Non-text contrast
+            - text: Borders, icons and UI elements against their effective background.
+          - listitem [ref=e18]:
+            - text: 03 · WCAG 2.5.8
+            - strong [ref=e19]: Tap target size
+            - text: 24px AA minimum with spacing analysis against neighboring interactive targets.
+          - listitem [ref=e20]:
+            - text: 04 · WCAG 1.4.4
+            - strong [ref=e21]: Text size
+            - text: 12px recommended minimum, 10px hard floor, caption/legal exceptions.
+          - listitem [ref=e22]:
+            - text: 05 · WCAG 2.4.7
+            - strong [ref=e23]: Focus state defined
+            - text: Flags interactive component sets shipping Hover/Pressed/Disabled but no Focus.
+          - listitem [ref=e24]:
+            - text: 06 · WCAG 2.4.11
+            - strong [ref=e25]: Focus visibility
+            - text: Validates indicator thickness (≥2px) and contrast (≥3:1) against the surface.
+    - region "Live demo" [ref=e26]:
+      - generic [ref=e27]:
+        - heading "Live demo" [level=2] [ref=e28]
+        - paragraph [ref=e29]:
+          - text: This is the
+          - emphasis [ref=e30]: actual plugin UI
+          - text: ", running in your browser against a simulated Figma sandbox with sample scan results. Hit"
+          - strong [ref=e31]: Scan page
+          - text: ", browse issues, open details, apply the contrast auto-fix. (AI alt text needs a local Ollama, so it stays offline here.)"
+        - generic [ref=e33]:
+          - generic [ref=e34]: ⬢ Figma A11y Audit — demo
+          - iframe [active] [ref=e35]:
+            - generic [ref=f1e3]:
+              - generic [ref=f1e4]:
+                - generic [ref=f1e5]:
+                  - heading "Settings" [level=2] [ref=f1e6]
+                  - button "✕" [ref=f1e7] [cursor=pointer]
+                - generic [ref=f1e8]:
+                  - generic [ref=f1e9]:
+                    - heading "Ollama Configuration" [level=3] [ref=f1e10]
+                    - generic [ref=f1e11]:
+                      - generic [ref=f1e12]: "Endpoint:"
+                      - generic [ref=f1e13]:
+                        - code [ref=f1e14]: http://localhost:11434
+                        - button "Edit" [ref=f1e15] [cursor=pointer]
+                    - generic [ref=f1e16]:
+                      - generic [ref=f1e17]: "Status:"
+                      - generic [ref=f1e18]:
+                        - generic [ref=f1e19]: 🟢
+                        - generic [ref=f1e20]: Connected
+                    - generic [ref=f1e21]:
+                      - generic [ref=f1e22]: "Model:"
+                      - code [ref=f1e24]: llama3.2-vision (~7.3GB)
+                    - button "Test Connection" [ref=f1e25] [cursor=pointer]
+                  - generic [ref=f1e26]:
+                    - heading "About" [level=3] [ref=f1e27]
+                    - generic [ref=f1e28]:
+                      - paragraph [ref=f1e29]:
+                        - strong [ref=f1e30]: A11y Audit
+                        - text: v0.5
+                      - paragraph [ref=f1e31]: Accessibility scanning + AI-powered annotation
+                      - list [ref=f1e32]:
+                        - listitem [ref=f1e33]: 6 Tier 1 checks with canvas markers
+                        - listitem [ref=f1e34]: Focus state auto-fixes (creates the variant)
+                        - listitem [ref=f1e35]: Tab order with on-canvas path
+                        - listitem [ref=f1e36]: Alt text assignment with local AI
+                        - listitem [ref=f1e37]: Language declaration
+                      - paragraph [ref=f1e38]: Built with React, Figma Plugin API, and Ollama
+              - generic [ref=f1e146]:
+                - generic [ref=f1e147]:
+                  - button "← Back" [ref=f1e148] [cursor=pointer]
+                  - heading "Annotate" [level=2] [ref=f1e149]
+                  - button "? Legend" [ref=f1e152] [cursor=pointer]
+                - generic [ref=f1e153]:
+                  - button "Tab Order" [active] [ref=f1e154] [cursor=pointer]
+                  - button "Alt Text" [ref=f1e155] [cursor=pointer]
+                  - button "Language" [ref=f1e156] [cursor=pointer]
+                - generic [ref=f1e237]:
+                  - generic [ref=f1e238]:
+                    - heading "Assign tab order for keyboard navigation" [level=3] [ref=f1e239]
+                    - paragraph [ref=f1e240]: Click rows (or elements on the canvas) in the order they should receive focus. The order is saved with the file — reopen anytime to edit or add missed elements without re-running detection.
+                  - generic [ref=f1e241]:
+                    - paragraph [ref=f1e242]:
+                      - strong [ref=f1e243]: "Interactive elements:"
+                      - text: 5 ·
+                      - strong [ref=f1e244]: "Assigned:"
+                      - text: "5"
+                    - generic "With this on, clicking any element on the canvas adds it as the next stop — even if detection missed it." [ref=f1e245] [cursor=pointer]:
+                      - 'checkbox "🎯 Canvas picking: click elements on canvas to add stops" [checked] [ref=f1e246]'
+                      - text: "🎯 Canvas picking: click elements on canvas to add stops"
+                    - button "Re-detect" [ref=f1e247] [cursor=pointer]
+                  - generic [ref=f1e248]:
+                    - generic "Click to unassign" [ref=f1e249] [cursor=pointer]:
+                      - generic [ref=f1e250]:
+                        - generic [ref=f1e251]: Input / Password
+                        - generic [ref=f1e252]:
+                          - generic [ref=f1e253]: "1"
+                          - button "↑" [disabled] [ref=f1e254]
+                          - button "↓" [ref=f1e255]
+                          - button "✕" [ref=f1e256]
+                          - button "◎" [ref=f1e257]
+                    - generic "Click to unassign" [ref=f1e258] [cursor=pointer]:
+                      - generic [ref=f1e259]:
+                        - generic [ref=f1e260]: Input / Email
+                        - generic [ref=f1e261]:
+                          - generic [ref=f1e262]: "2"
+                          - button "↑" [ref=f1e263]
+                          - button "↓" [ref=f1e264]
+                          - button "✕" [ref=f1e265]
+                          - button "◎" [ref=f1e266]
+                    - generic "Click to unassign" [ref=f1e267] [cursor=pointer]:
+                      - generic [ref=f1e268]:
+                        - generic [ref=f1e269]: Link / Forgot password
+                        - generic [ref=f1e270]:
+                          - generic [ref=f1e271]: "3"
+                          - button "↑" [ref=f1e272]
+                          - button "↓" [ref=f1e273]
+                          - button "✕" [ref=f1e274]
+                          - button "◎" [ref=f1e275]
+                    - generic "Click to unassign" [ref=f1e276] [cursor=pointer]:
+                      - generic [ref=f1e277]:
+                        - generic [ref=f1e278]: Button / Sign in
+                        - generic [ref=f1e279]:
+                          - generic [ref=f1e280]: "4"
+                          - button "↑" [ref=f1e281]
+                          - button "↓" [ref=f1e282]
+                          - button "✕" [ref=f1e283]
+                          - button "◎" [ref=f1e284]
+                    - generic "Click to unassign" [ref=f1e285] [cursor=pointer]:
+                      - generic [ref=f1e286]:
+                        - generic [ref=f1e287]: Button / Create account
+                        - generic [ref=f1e288]:
+                          - generic [ref=f1e289]: "5"
+                          - button "↑" [ref=f1e290]
+                          - button "↓" [disabled] [ref=f1e291]
+                          - button "✕" [ref=f1e292]
+                          - button "◎" [ref=f1e293]
+                  - paragraph [ref=f1e295]: Loaded saved order (5 stops) — edit and save again.
+                  - generic [ref=f1e297]:
+                    - button "Clear" [ref=f1e298] [cursor=pointer]
+                    - button "Auto-assign" [ref=f1e299] [cursor=pointer]
+                    - button "Save order" [ref=f1e300] [cursor=pointer]
+    - region "Run it locally" [ref=e36]:
+      - generic [ref=e37]:
+        - heading "Run it locally" [level=2] [ref=e38]
+        - list [ref=e39]:
+          - listitem [ref=e40]: "Clone and build:"
+        - code [ref=e42]: git clone https://github.com/juliocoraspe/figma-a11y-audit.git cd figma-a11y-audit npm install npm run build
+        - list [ref=e43]:
+          - listitem [ref=e44]:
+            - text: "In Figma desktop:"
+            - strong [ref=e45]: Plugins → Development → Import plugin from manifest…
+            - text: and pick
+            - code [ref=e46]: dist/manifest.json
+            - text: .
+          - listitem [ref=e47]:
+            - text: For AI alt text, run Ollama with permissive CORS (the plugin iframe has a
+            - code [ref=e48]: "null"
+            - text: "origin):"
+        - code [ref=e50]: OLLAMA_ORIGINS="*" ollama serve ollama pull llama3.2-vision
+  - contentinfo [ref=e51]:
+    - generic [ref=e52]:
+      - text: Built by
+      - link "Julio Coraspe" [ref=e53] [cursor=pointer]:
+        - /url: https://github.com/juliocoraspe
+      - text: · MIT License · React + Figma Plugin API + Ollama. Everything runs on your machine.

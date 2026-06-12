@@ -206,6 +206,7 @@ ollama pull llama3.2-vision</code></pre>
   // Demo-side state so the mock behaves like the real sandbox.
   var fixedIds = new Set();
   var dismissedIds = new Set();
+  var savedTabOrder = {};
 
   var ISSUES = [
     {
@@ -404,15 +405,21 @@ ollama pull llama3.2-vision</code></pre>
 
       case "tab-order-request":
         setTimeout(function () {
-          reply({ type: "tab-order-detected", frameId: "demo-frame", nodes: TAB_NODES });
+          reply({
+            type: "tab-order-detected",
+            frameId: "demo-frame",
+            nodes: TAB_NODES,
+            saved: savedTabOrder
+          });
         }, 350);
         break;
 
       case "annotate-tab-order":
+        savedTabOrder = msg.orderMap || {};
         reply({
           type: "tab-order-saved",
           frameId: msg.frameId,
-          count: Object.keys(msg.orderMap || {}).length
+          count: Object.keys(savedTabOrder).length
         });
         break;
 

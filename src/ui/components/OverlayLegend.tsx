@@ -146,7 +146,7 @@ export function OverlayLegend() {
               </span>
             }
             title="Tab order"
-            text="Purple squares at the top-left of interactive elements show the keyboard focus sequence; a dashed purple line traces the path 1 → N. Assigned in Annotate → Tab Order."
+            text="Purple squares at the top-left of interactive elements show the keyboard focus sequence; a dashed purple line traces the path 1 → N. Assigned in Annotate → Tab Order — with the mode open, clicking any element on the canvas adds it as a stop. The order is saved with the file and can be edited later without re-detection."
           />
 
           <Row

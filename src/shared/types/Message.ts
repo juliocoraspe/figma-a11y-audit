@@ -43,8 +43,20 @@ export type SandboxToUI =
       type: "tab-order-detected";
       frameId: string;
       nodes: Array<{ nodeId: string; name: string }>;
+      /**
+       * Previously saved assignment for this frame (nodeId -> order),
+       * loaded from page plugin data and pruned of deleted nodes — lets the
+       * user resume editing without re-running the analysis.
+       */
+      saved: Record<string, number>;
     }
   | { type: "tab-order-saved"; frameId: string; count: number }
+  /**
+   * The user clicked a real element on canvas (not an overlay). Emitted on
+   * every single-node selection; Tab Order mode uses it for canvas picking
+   * (add a missed stop / highlight an existing one).
+   */
+  | { type: "canvas-node-selected"; nodeId: string; name: string }
   | {
       type: "images-detected";
       /** Which scope was actually scanned, so the UI can say so. */

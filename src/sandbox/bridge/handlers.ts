@@ -597,11 +597,59 @@ function handleTabOrderRequest(frameId?: string): void {
   walkForInteractive(root, interactive);
   sortByVisualOrder(interactive);
 
+  const nodes = interactive.map((n) => ({ nodeId: n.id, name: n.name }));
+
+  // Resume a previously saved assignment: prune deleted nodes, and surface
+  // stops the user added by hand (canvas picking) that detection misses.
+  const saved = loadTabOrder(root.id);
+  const pruned: Record<string, number> = {};
+  const known = new Set(nodes.map((n) => n.nodeId));
+  for (const [nodeId, order] of Object.entries(saved)) {
+    const node = figma.getNodeById(nodeId);
+    if (!node || node.type === "DOCUMENT" || node.type === "PAGE") continue;
+    pruned[nodeId] = order;
+    if (!known.has(nodeId)) {
+      nodes.push({ nodeId, name: node.name });
+      known.add(nodeId);
+    }
+  }
+
   postUI({
     type: "tab-order-detected",
     frameId: root.id,
-    nodes: interactive.map((n) => ({ nodeId: n.id, name: n.name })),
+    nodes,
+    saved: pruned,
   });
+}
+
+/** Page-level plugin data key holding tab orders per frame. */
+const TAB_ORDER_KEY = "a11y-tab-order";
+
+function loadTabOrder(frameId: string): Record<string, number> {
+  try {
+    const raw = figma.currentPage.getPluginData(TAB_ORDER_KEY);
+    if (!raw) return {};
+    const all = JSON.parse(raw) as Record<string, Record<string, number>>;
+    return all[frameId] ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function saveTabOrder(frameId: string, orderMap: Record<string, number>): void {
+  let all: Record<string, Record<string, number>> = {};
+  try {
+    const raw = figma.currentPage.getPluginData(TAB_ORDER_KEY);
+    if (raw) all = JSON.parse(raw) as Record<string, Record<string, number>>;
+  } catch {
+    all = {};
+  }
+  if (Object.keys(orderMap).length > 0) all[frameId] = orderMap;
+  else delete all[frameId];
+  figma.currentPage.setPluginData(
+    TAB_ORDER_KEY,
+    Object.keys(all).length > 0 ? JSON.stringify(all) : "",
+  );
 }
 
 function walkForInteractive(node: BaseNode, out: SceneNode[]): void {
@@ -643,8 +691,9 @@ function handleAnnotateTabOrder(
   frameId: string,
   orderMap: Record<string, number>,
 ): void {
-  // v0.3: session-only storage; v1.1+ will persist via clientStorage.
-  console.log(`[a11y] Tab order saved for frame ${frameId}:`, orderMap);
+  // Persisted in page plugin data (saved inside the .fig file), so the
+  // assignment can be reopened and edited later without re-analysis.
+  saveTabOrder(frameId, orderMap);
   postUI({
     type: "tab-order-saved",
     frameId,
